@@ -9,17 +9,15 @@ class AbstractOrthoPolys(object):
 
     def __init__(
             self, 
-            lower_limit, 
-            upper_limit, 
+            A, 
+            B,
+            a, 
+            b,
     ):
-        self.lower_limit = lower_limit
-        self.upper_limit = upper_limit
-        if self.lower_limit is None: 
-            self.lower_limit = -np.inf 
-        if self.upper_limit is None: 
-            self.upper_limit = np.inf
-        self.lower_limit = float(self.lower_limit) 
-        self.upper_limit = float(self.upper_limit)
+        self.A = A
+        self.B = B
+        self.a = a 
+        self.b = b 
     
     def __call__(self, n, x):
         r"""
@@ -33,8 +31,8 @@ class AbstractOrthoPolys(object):
             y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
         """
         assert n>=0
-        assert (x>=self.lower_limit).all()
-        assert (x<=self.upper_limit).all()
+        assert (x>=self.a).all()
+        assert (x<=self.b).all()
         y = torch.empty([n+1]+list(x.shape))
         y[0] = self.c00
         if n==0: return y 
@@ -85,8 +83,8 @@ class AbstractOrthoPolys(object):
         Returns: 
             y (torch.Tensor): log-scaled weight evaluations with the same shape as `x`.
         """
-        assert (x>=self.lower_limit).all()
-        assert (x<=self.upper_limit).all()
+        assert (x>=self.a).all()
+        assert (x<=self.b).all()
         y = self._lweight(x)
         return y
     
@@ -109,7 +107,8 @@ class AbstractOrthoPolys(object):
 class HermitePolys(AbstractOrthoPolys):
 
     r"""
-    [Hermite polynomials](https://en.wikipedia.org/wiki/Hermite_polynomials)
+    Orthonormal [Hermite polynomials](https://en.wikipedia.org/wiki/Hermite_polynomials)
+    supported on $(-\infty,\infty)$ with the weight normalized to be a density function. 
 
     Examples:
         >>> torch.set_default_dtype(torch.float64)
@@ -150,14 +149,29 @@ class HermitePolys(AbstractOrthoPolys):
 
         >>> HermitePolys().lweight(torch.arange(-2,2)) 
         tensor([-4, -1,  0, -1])
+
+        >>> p = HermitePolys(loc=np.pi,scale=np.exp(1))
+        >>> p.a,p.b
+        (-inf, inf)
+        >>> p.A,p.B
+        (0.36787944117144233, -1.1557273497909217)
     """
 
     def __init__(
             self,
+            loc = 0, 
+            scale = 1,
     ):
+        assert np.isfinite(loc)
+        assert np.isfinite(scale)
+        assert scale!=0
+        loc = float(loc) 
+        scale = float(scale)
         super().__init__(
-            lower_limit = None, 
-            upper_limit = None, 
+            A = 1/scale,
+            B = -loc/scale,
+            a = -np.inf, 
+            b = np.inf,
         )
         self.c00 = 1
         self.c11 = 2 
@@ -179,7 +193,8 @@ class HermitePolys(AbstractOrthoPolys):
 class LaguerrePolys(AbstractOrthoPolys):
 
     r"""
-    [Generalized Laguerre polynomials](https://en.wikipedia.org/wiki/Laguerre_polynomials#Generalized_Laguerre_polynomials)
+    Orthonormal [Generalized Laguerre polynomials](https://en.wikipedia.org/wiki/Laguerre_polynomials#Generalized_Laguerre_polynomials)
+    supported on $[a,\infty)$ or $(-\infty,a]$ with the weight normalized to be a density function. 
 
     Examples:
         >>> torch.set_default_dtype(torch.float64)
@@ -223,15 +238,35 @@ class LaguerrePolys(AbstractOrthoPolys):
 
         >>> LaguerrePolys(alpha=np.pi).lweight(torch.arange(4)) 
         tensor([   -inf, -1.0000,  0.1776,  0.4514])
+
+        >>> p = LaguerrePolys(alpha=1/3,loc=np.pi,scale=np.exp(1))
+        >>> p.a,p.b
+        (3.141592653589793, inf)
+        >>> p.A*p.a+p.B,p.A*p.b+p.B
+        (0.0, inf)
+        >>> p = LaguerrePolys(alpha=1/3,loc=np.pi,scale=-np.exp(1))
+        >>> p.a,p.b
+        (-inf, 3.141592653589793)
+        >>> p.A*p.b+p.B,p.A*p.a+p.B
+        (0.0, inf)
     """
 
     def __init__(
             self,
             alpha = 0,
+            loc = 0, 
+            scale = 1, 
     ):
+        assert np.isfinite(loc)
+        assert np.isfinite(scale)
+        assert scale!=0
+        loc = float(loc) 
+        scale = float(scale)
         super().__init__(
-            lower_limit = 0, 
-            upper_limit = None, 
+            A = 1/scale,
+            B = -loc/scale,
+            a = loc if scale>0 else -np.inf, 
+            b = np.inf if scale>0 else loc,
         )
         self.alpha = float(alpha) 
         assert self.alpha > -1
@@ -255,7 +290,8 @@ class LaguerrePolys(AbstractOrthoPolys):
 class JacobiPolys(AbstractOrthoPolys):
 
     r"""
-    [Jacobi polynomials](https://en.wikipedia.org/wiki/Jacobi_polynomials)
+    Orthonormal [Jacobi polynomials](https://en.wikipedia.org/wiki/Jacobi_polynomials) 
+    supported on $[a,b]$ with the weight normalized to be a density function. 
 
     Examples:
         >>> torch.set_default_dtype(torch.float64)
@@ -296,16 +332,31 @@ class JacobiPolys(AbstractOrthoPolys):
 
         >>> JacobiPolys(alpha=-1/2,beta=-3/4).lweight(torch.arange(-2,3)/2) 
         tensor([   inf, 0.3171, -0.0000, 0.0425,    inf])
+
+        >>> p = JacobiPolys(alpha=-1/2,beta=-3/4,loc=np.pi,scale=np.exp(1))
+        >>> p.a,p.b
+        (3.141592653589793, 5.859874482048838)
+        >>> p.A*p.a+p.B,p.A*p.b+p.B
+        (-1.0, 1.0)
     """
     
     def __init__(
             self,
             alpha = 0,
-            beta = 0, 
+            beta = 0,
+            loc = -1, 
+            scale = 2,
     ):
+        assert np.isfinite(loc)
+        assert np.isfinite(scale)
+        assert scale>0
+        loc = float(loc) 
+        scale = float(scale)
         super().__init__(
-            lower_limit = -1, 
-            upper_limit = 1,
+            A = 2/scale,
+            B = -2*loc/scale-1,
+            a = loc, 
+            b = loc+scale,
         )
         self.alpha = float(alpha) 
         self.beta = float(beta) 
