@@ -1,0 +1,63 @@
+# https://packaging.python.org/en/latest/guides/writing-pyproject-toml/
+# brew install pdm
+# https://pdm-project.org/latest/usage/publish/
+# pdm publish --repository testpypi
+# pdm publish 
+
+[build-system]
+requires = ["pdm-backend >= 2.4.0"]
+build-backend = "pdm.backend"
+
+# [project.urls]
+# Documentation = "https://alegresor.github.io/fastgps/"
+# Repository = "https://github.com/alegresor/fastgps"
+# Issues = "https://github.com/alegresor/fastgps/issues"
+
+[project]
+name = "torchorthopolys"
+description = "Classic orthogonal polynomials in PyTorch"
+authors = [
+    {name="Aleksei G Sorokin", email="agsorokin3@gmail.com"},
+]
+readme = "README.md"
+keywords = [
+        "PyTorch",
+        "classic",
+        "orthogonal",
+        "orthonormal",
+        "polynomials",
+        "Chebyshev",
+        "Legendre",
+        "Hermite",
+        "Laguerre",
+        "Gegenbauer",
+        "Jacobi",
+    ]
+license = "GPL-3.0"
+dynamic = ["version"]
+requires-python = ">= 3.7"
+dependencies = [
+    "torch >= 2.0.0",
+    "numpy >= 1.17.0",
+    "scipy >= 1.13.0",
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest >= 8.3.5",
+    "nbval >= 0.10.0",
+    "jupyterlab >= 4.0.0",
+    "matplotlib >= 3.9.0",
+    "mkdocs >= 1.5.0",
+    "mkdocs-material >= 9.6.12",
+    "mkdocs-jupyter >= 0.25.0",
+    "mkdocstrings-python >= 1.16.0",
+]
+superdev = [
+    "torchorthopolys[dev]",
+    "pytest-accept >= 0.1.12",
+]
+
+[tool.pdm.version]
+source = "file"
+path = "torchorthopolys/__init__.py"
