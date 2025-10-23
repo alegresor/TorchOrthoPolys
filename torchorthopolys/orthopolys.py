@@ -50,6 +50,21 @@ class AbstractOrthoPolys(object):
             y[i+1] = (t1[i]*x+t2[i])*y[i]-t3[i]*y[i-1]
         return y
     
+    def coeffs(self, n):
+        assert n>=0 
+        c = torch.zeros((n+1,n+1))
+        c[0,0] = self.c00
+        if n==0: return c
+        c[1,0] = self.c10
+        c[1,1] = self.c11
+        if n==1: return c
+        t1,t2,t3 = self.recur_terms(n)
+        for i in range(1,n):
+            c[i+1,:i] = -t3[i]*c[i-1,:i]
+            c[i+1,:(i+1)] = c[i+1,:(i+1)]+t2[i]*c[i,:(i+1)]
+            c[i+1,1:(i+2)] = c[i+1,1:(i+2)]+t1[i]*c[i,:(i+1)]
+        return c
+
 
 class HermitePolys(AbstractOrthoPolys):
 
@@ -64,10 +79,13 @@ class HermitePolys(AbstractOrthoPolys):
         >>> HermitePolys().lweight(torch.arange(-2,2)) 
         tensor([-4, -1,  0, -1])
 
-        >>> x = x=torch.rand((2,3),generator=rng)
-        >>> y = HermitePolys()(n=4,x=x)
+        >>> p = HermitePolys()
+        >>> n = 4
+        >>> x = torch.rand((2,3),generator=rng)
+        >>> y = p(n,x)
         >>> y.shape
         torch.Size([5, 2, 3])
+        
         >>> torch.allclose(y[0],1+0*x)
         True
         >>> torch.allclose(y[1],2*x)
@@ -77,6 +95,18 @@ class HermitePolys(AbstractOrthoPolys):
         >>> torch.allclose(y[3],8*x**3-12*x)
         True
         >>> torch.allclose(y[4],16*x**4-48*x**2+12)
+        True
+
+        >>> coeffs = p.coeffs(n)
+        >>> coeffs.shape
+        torch.Size([5, 5])
+        >>> xpows = x[...,None]**torch.arange(n+1)
+        >>> xpows.shape
+        torch.Size([2, 3, 5])
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
+        >>> yhat.shape
+        torch.Size([5, 2, 3])
+        >>> torch.allclose(y,yhat)
         True
     """
 
@@ -120,10 +150,13 @@ class LaguerrePolys(AbstractOrthoPolys):
         tensor([   -inf, -1.0000,  0.1776,  0.4514])
 
         >>> alpha = np.pi 
-        >>> x = x=torch.rand((2,3),generator=rng)
-        >>> y = LaguerrePolys(alpha=alpha)(n=4,x=x)
+        >>> p = LaguerrePolys(alpha=alpha)
+        >>> n = 4
+        >>> x = torch.rand((2,3),generator=rng)
+        >>> y = p(n,x)
         >>> y.shape
         torch.Size([5, 2, 3])
+        
         >>> torch.allclose(y[0],1+0*x)
         True
         >>> torch.allclose(y[1],-x+alpha+1)
@@ -135,6 +168,17 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> torch.allclose(y[4],1/24*(x**4-4*(alpha+4)*x**3+6*(alpha+3)*(alpha+4)*x**2-4*(alpha+2)*(alpha+3)*(alpha+4)*x+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)))
         True
 
+        >>> coeffs = p.coeffs(n)
+        >>> coeffs.shape
+        torch.Size([5, 5])
+        >>> xpows = x[...,None]**torch.arange(n+1)
+        >>> xpows.shape
+        torch.Size([2, 3, 5])
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
+        >>> yhat.shape
+        torch.Size([5, 2, 3])
+        >>> torch.allclose(y,yhat)
+        True
     """
 
     def __init__(
@@ -181,15 +225,30 @@ class JacobiPolys(AbstractOrthoPolys):
 
         >>> alpha = -1/2 
         >>> beta = -3/4
-        >>> x = x=torch.rand((2,3),generator=rng)
-        >>> y = JacobiPolys(alpha=alpha,beta=beta)(n=4,x=x)
+        >>> p = JacobiPolys(alpha=alpha,beta=beta)
+        >>> n = 4
+        >>> x = torch.rand((2,3),generator=rng)
+        >>> y = p(n,x)
         >>> y.shape
         torch.Size([5, 2, 3])
+        
         >>> torch.allclose(y[0],1+0*x)
         True
         >>> torch.allclose(y[1],(alpha+1)+(alpha+beta+2)*(x-1)/2)
         True
         >>> torch.allclose(y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(x-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((x-1)/2)**2)
+        True
+
+        >>> coeffs = p.coeffs(n)
+        >>> coeffs.shape
+        torch.Size([5, 5])
+        >>> xpows = x[...,None]**torch.arange(n+1)
+        >>> xpows.shape
+        torch.Size([2, 3, 5])
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
+        >>> yhat.shape
+        torch.Size([5, 2, 3])
+        >>> torch.allclose(y,yhat)
         True
     """
     
