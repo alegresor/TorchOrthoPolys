@@ -3,6 +3,9 @@ import numpy as np
 import scipy.special
 
 class AbstractOrthoPolys(object):
+    r"""
+    Abstract class for [classic orthogonal polynomials](https://en.wikipedia.org/wiki/Classical_orthogonal_polynomials#Table_of_classical_orthogonal_polynomials). 
+    """
 
     def __init__(
             self, 
@@ -18,25 +21,17 @@ class AbstractOrthoPolys(object):
         self.lower_limit = float(self.lower_limit) 
         self.upper_limit = float(self.upper_limit)
     
-    def lnorm(self, n):
-        assert n>=0
-        nrange = torch.arange(n+1)
-        y = self._lnorm(nrange)
-        return y
-    
-    def lweight(self, x):
-        assert (x>=self.lower_limit).all()
-        assert (x<=self.upper_limit).all()
-        y = self._lweight(x)
-        return y
-    
-    def recur_terms(self, n):
-        assert n>=0
-        nrange = torch.arange(n+1)
-        y = self._recur_terms(nrange)
-        return y
-    
     def __call__(self, n, x):
+        r"""
+        Evaluate polynomials. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+            x (torch.Tensor): nodes at which to evaluate.
+
+        Returns: 
+            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
+        """
         assert n>=0
         assert (x>=self.lower_limit).all()
         assert (x<=self.upper_limit).all()
@@ -51,6 +46,15 @@ class AbstractOrthoPolys(object):
         return y
     
     def coeffs(self, n):
+        r"""
+        Evaluate coefficients. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+
+        Returns: 
+            c (torch.Tensor): coefficients with shape `[n+1,n+1]`.
+        """
         assert n>=0 
         c = torch.zeros((n+1,n+1))
         c[0,0] = self.c00
@@ -64,20 +68,52 @@ class AbstractOrthoPolys(object):
             c[i+1,:(i+1)] = c[i+1,:(i+1)]+t2[i]*c[i,:(i+1)]
             c[i+1,1:(i+2)] = c[i+1,1:(i+2)]+t1[i]*c[i,:(i+1)]
         return c
+    
+    def recur_terms(self, n):
+        assert n>=0
+        nrange = torch.arange(n+1)
+        y = self._recur_terms(nrange)
+        return y
+    
+    def lweight(self, x):
+        r"""
+        Log of the weight function. 
+
+        Args:
+            x (torch.Tensor): nodes at which to evaluate.
+
+        Returns: 
+            y (torch.Tensor): log-scaled weight evaluations with the same shape as `x`.
+        """
+        assert (x>=self.lower_limit).all()
+        assert (x<=self.upper_limit).all()
+        y = self._lweight(x)
+        return y
+    
+    def lnorm(self, n):
+        r"""
+        Log of the normalization constants. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+
+        Returns: 
+            y (torch.Tensor): log-scaled normalization constants with shape `[n+1,]`.
+        """
+        assert n>=0
+        nrange = torch.arange(n+1)
+        y = self._lnorm(nrange)
+        return y
 
 
 class HermitePolys(AbstractOrthoPolys):
 
-    """
+    r"""
+    [Hermite polynomials](https://en.wikipedia.org/wiki/Hermite_polynomials)
+
     Examples:
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
-
-        >>> HermitePolys().lnorm(3) 
-        tensor([0.5724, 1.2655, 2.6518, 4.4436])
-
-        >>> HermitePolys().lweight(torch.arange(-2,2)) 
-        tensor([-4, -1,  0, -1])
 
         >>> p = HermitePolys()
         >>> n = 4
@@ -108,6 +144,12 @@ class HermitePolys(AbstractOrthoPolys):
         torch.Size([5, 2, 3])
         >>> torch.allclose(y,yhat)
         True
+
+        >>> HermitePolys().lnorm(3) 
+        tensor([0.5724, 1.2655, 2.6518, 4.4436])
+
+        >>> HermitePolys().lweight(torch.arange(-2,2)) 
+        tensor([-4, -1,  0, -1])
     """
 
     def __init__(
@@ -136,18 +178,12 @@ class HermitePolys(AbstractOrthoPolys):
 
 class LaguerrePolys(AbstractOrthoPolys):
 
-    """
+    r"""
+    [Generalized Laguerre polynomials](https://en.wikipedia.org/wiki/Laguerre_polynomials#Generalized_Laguerre_polynomials)
+
     Examples:
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
-
-        >>> LaguerrePolys().lnorm(3) 
-        tensor([0., 0., 0., 0.])
-        >>> LaguerrePolys(alpha=np.pi).lnorm(3) 
-        tensor([1.9724, 3.3935, 4.3377, 5.0542])
-
-        >>> LaguerrePolys(alpha=np.pi).lweight(torch.arange(4)) 
-        tensor([   -inf, -1.0000,  0.1776,  0.4514])
 
         >>> alpha = np.pi 
         >>> p = LaguerrePolys(alpha=alpha)
@@ -179,6 +215,14 @@ class LaguerrePolys(AbstractOrthoPolys):
         torch.Size([5, 2, 3])
         >>> torch.allclose(y,yhat)
         True
+
+        >>> LaguerrePolys().lnorm(3) 
+        tensor([0., 0., 0., 0.])
+        >>> LaguerrePolys(alpha=np.pi).lnorm(3) 
+        tensor([1.9724, 3.3935, 4.3377, 5.0542])
+
+        >>> LaguerrePolys(alpha=np.pi).lweight(torch.arange(4)) 
+        tensor([   -inf, -1.0000,  0.1776,  0.4514])
     """
 
     def __init__(
@@ -210,18 +254,12 @@ class LaguerrePolys(AbstractOrthoPolys):
 
 class JacobiPolys(AbstractOrthoPolys):
 
-    """
+    r"""
+    [Jacobi polynomials](https://en.wikipedia.org/wiki/Jacobi_polynomials)
+
     Examples:
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
-
-        >>> torch.allclose(JacobiPolys(alpha=0,beta=0).lnorm(3),torch.log(2/(2*torch.arange(4)+1)))
-        True
-        >>> JacobiPolys(alpha=-1/2,beta=-3/4).lnorm(3)
-        tensor([ 1.4838, -1.1552, -1.6942, -2.0527])
-
-        >>> JacobiPolys(alpha=-1/2,beta=-3/4).lweight(torch.arange(-2,3)/2) 
-        tensor([   inf, 0.3171, -0.0000, 0.0425,    inf])
 
         >>> alpha = -1/2 
         >>> beta = -3/4
@@ -250,6 +288,14 @@ class JacobiPolys(AbstractOrthoPolys):
         torch.Size([5, 2, 3])
         >>> torch.allclose(y,yhat)
         True
+
+        >>> torch.allclose(JacobiPolys(alpha=0,beta=0).lnorm(3),torch.log(2/(2*torch.arange(4)+1)))
+        True
+        >>> JacobiPolys(alpha=-1/2,beta=-3/4).lnorm(3)
+        tensor([ 1.4838, -1.1552, -1.6942, -2.0527])
+
+        >>> JacobiPolys(alpha=-1/2,beta=-3/4).lweight(torch.arange(-2,3)/2) 
+        tensor([   inf, 0.3171, -0.0000, 0.0425,    inf])
     """
     
     def __init__(
@@ -287,3 +333,4 @@ class JacobiPolys(AbstractOrthoPolys):
         t3num = (nrange+self.alpha)*(nrange+self.beta)*(2*nrange+2+self.alpha+self.beta)
         t3denom = (nrange+1)*(nrange+1+self.alpha+self.beta)*(2*nrange+self.alpha+self.beta)
         return t1num/t1denom,t2num/t2denom,t3num/t3denom
+    
