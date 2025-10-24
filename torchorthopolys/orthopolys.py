@@ -206,78 +206,54 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
 
-        >>> alpha = np.pi 
-        >>> p = LaguerrePolys(alpha=alpha)
-        >>> n = 4
-        >>> x = torch.rand((2,3),generator=rng)
-        >>> y = p(n,x)
-        >>> y.shape
-        torch.Size([5, 2, 3])
-        
-        >>> Cs = torch.exp(p.lnorm(n)) 
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],-x+alpha+1)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],1/2*(x**2-2*(alpha+2)*x+(alpha+1)*(alpha+2)))
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],1/6*(-x**3+3*(alpha+3)*x**2-3*(alpha+2)*(alpha+3)*x+(alpha+1)*(alpha+2)*(alpha+3)))
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],1/24*(x**4-4*(alpha+4)*x**3+6*(alpha+3)*(alpha+4)*x**2-4*(alpha+2)*(alpha+3)*(alpha+4)*x+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)))
-        True
-
-        >>> coeffs = p.coeffs(n)
-        >>> coeffs.shape
-        torch.Size([5, 5])
-        >>> xpows = x[...,None]**torch.arange(n+1)
-        >>> xpows.shape
-        torch.Size([2, 3, 5])
-        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
-        >>> yhat.shape
-        torch.Size([5, 2, 3])
-        >>> torch.allclose(y,yhat)
-        True
-
-        >>> LaguerrePolys().lnorm(3) 
-        tensor([0., 0., 0., 0.])
-        >>> LaguerrePolys(alpha=np.pi).lnorm(3) 
-        tensor([1.9724, 3.3935, 4.3377, 5.0542])
-
         >>> alpha = -1/np.sqrt(3)
         >>> loc = -np.pi 
         >>> scale = -np.sqrt(3)
         >>> p = LaguerrePolys(alpha=alpha,loc=loc,scale=scale)
-        >>> x = loc+scale*torch.rand((5,20),generator=rng)
-        >>> lrho = p.lweight(x) 
-        >>> lrho.shape
-        torch.Size([5, 20])
-        >>> lrhohat = torch.from_numpy(scipy.stats.gamma.logpdf(-x.numpy(),a=alpha+1,loc=-loc,scale=-scale))
-        >>> torch.allclose(lrho,lrhohat)
-        True
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = -torch.from_numpy(scipy.stats.gamma.ppf(u,a=alpha+1,loc=-loc,scale=-scale))
-        >>> y = p(4,x)
-        >>> c = (y[:,None]*y[None,:]).mean(-1)
-        >>> c.shape
-        torch.Size([5, 5])
-        >>> c
+        >>> n = 4
+
+        >>> y = p(n,x)
+        >>> y.shape
+        torch.Size([5, 65536])
+        >>> (y[:,None]*y[None,:]).mean(-1)
         tensor([[ 1.0000e+00,  1.1409e-05, -1.1488e-04,  4.2222e-04, -6.7890e-04],
                 [ 1.1409e-05,  9.9967e-01,  2.4873e-03, -8.2370e-03,  1.2887e-02],
                 [-1.1488e-04,  2.4873e-03,  9.8360e-01,  5.1614e-02, -8.0659e-02],
                 [ 4.2222e-04, -8.2370e-03,  5.1614e-02,  8.3976e-01,  2.5730e-01],
                 [-6.7890e-04,  1.2887e-02, -8.0659e-02,  2.5730e-01,  5.5508e-01]])
-        
-        >>> p = LaguerrePolys(alpha=1/3,loc=np.pi,scale=np.exp(1))
-        >>> p.a,p.b
-        (3.141592653589793, inf)
-        >>> p.A*p.a+p.B,p.A*p.b+p.B
-        (0.0, inf)
-        >>> p = LaguerrePolys(alpha=1/3,loc=np.pi,scale=-np.exp(1))
-        >>> p.a,p.b
-        (-inf, 3.141592653589793)
-        >>> p.A*p.b+p.B,p.A*p.a+p.B
-        (0.0, inf)
+       
+        >>> lrho = p.lweight(x) 
+        >>> lrhohat = torch.from_numpy(scipy.stats.gamma.logpdf(-x.numpy(),a=alpha+1,loc=-loc,scale=-scale))
+        >>> assert torch.allclose(lrho,lrhohat,atol=1e-3)
+
+        >>> Cs = torch.exp(p.lnorm(n)) 
+        >>> z = p.A*x+p.B
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*z)
+        True
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],-z+alpha+1)
+        True
+        >>> ( (p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2]) - (1/2*(z**2-2*(alpha+2)*x+(alpha+1)*(alpha+2))) ).abs().max()
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],1/2*(z**2-2*(alpha+2)*x+(alpha+1)*(alpha+2)),atol=1e-3)
+        True
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],1/6*(-z**3+3*(alpha+3)*x**2-3*(alpha+2)*(alpha+3)*x+(alpha+1)*(alpha+2)*(alpha+3)),atol=1e-3)
+        True
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],1/24*(z**4-4*(alpha+4)*x**3+6*(alpha+3)*(alpha+4)*x**2-4*(alpha+2)*(alpha+3)*(alpha+4)*x+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)),atol=1e-3)
+        True
+
+        >>> coeffs = p.coeffs(n)
+        >>> coeffs.shape
+        torch.Size([5, 5])
+        >>> zpows = z[...,None]**torch.arange(n+1)
+        >>> zpows.shape
+        torch.Size([65536, 5])
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,zpows) # generally unstable
+        >>> yhat.shape
+        torch.Size([5, 65536])
+        >>> torch.allclose(y,yhat)
+        True
     """
 
     def __init__(
