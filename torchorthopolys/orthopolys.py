@@ -14,11 +14,12 @@ class AbstractOrthoPolys(object):
             a, 
             b,
     ):
-        self.A = A
-        self.B = B
-        self.a = a 
-        self.b = b 
-    
+        self.A = float(A)
+        self.B = float(B)
+        self.a = float(a) 
+        self.b = float(b)
+        self.factor_lweight = float(np.log(np.abs(self.A))+2*np.log(self.c00)-float(self.lnorm(0)))
+
     def __call__(self, n, x):
         r"""
         Evaluate polynomials. 
@@ -85,7 +86,7 @@ class AbstractOrthoPolys(object):
         """
         assert (x>=self.a).all()
         assert (x<=self.b).all()
-        y = self._lweight(x)
+        y = self.factor_lweight+self._lweight(self.A*x+self.B)
         return y
     
     def lnorm(self, n):
@@ -147,35 +148,43 @@ class HermitePolys(AbstractOrthoPolys):
         >>> HermitePolys().lnorm(3) 
         tensor([0.5724, 1.2655, 2.6518, 4.4436])
 
-        >>> HermitePolys().lweight(torch.arange(-2,2)) 
-        tensor([-4, -1,  0, -1])
+        >>> loc = -np.pi 
+        >>> scale = np.sqrt(3) 
+        >>> p = HermitePolys(loc=loc,scale=scale)
+        >>> x = loc+scale*torch.randn((5,20),generator=rng)
+        >>> lrho = p.lweight(x) 
+        >>> lrho.shape
+        torch.Size([5, 20])
+        >>> lrhohat = np.log(1)-np.log(2*np.pi)/2-np.log(scale)-((x-loc)/scale)**2/2
+        >>> torch.allclose(lrho,lrhohat)
+        True
 
         >>> p = HermitePolys(loc=np.pi,scale=np.exp(1))
         >>> p.a,p.b
         (-inf, inf)
         >>> p.A,p.B
-        (0.36787944117144233, -1.1557273497909217)
+        (0.2601300475114444, -0.8172226462399177)
     """
 
     def __init__(
             self,
             loc = 0, 
-            scale = 1,
+            scale = 1/np.sqrt(2),
     ):
-        assert np.isfinite(loc)
-        assert np.isfinite(scale)
-        assert scale!=0
-        loc = float(loc) 
-        scale = float(scale)
-        super().__init__(
-            A = 1/scale,
-            B = -loc/scale,
-            a = -np.inf, 
-            b = np.inf,
-        )
         self.c00 = 1
         self.c11 = 2 
         self.c10 = 0
+        assert np.isfinite(loc)
+        assert np.isfinite(scale)
+        assert scale>0
+        loc = loc 
+        scale = scale
+        super().__init__(
+            A = 1/(np.sqrt(2)*scale),
+            B = -loc/(np.sqrt(2)*scale),
+            a = -np.inf, 
+            b = np.inf,
+        )
     
     def _lnorm(self, nrange):
         return np.log(np.sqrt(np.pi))+nrange*np.log(2)+torch.lgamma(nrange+1)
@@ -236,9 +245,18 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> LaguerrePolys(alpha=np.pi).lnorm(3) 
         tensor([1.9724, 3.3935, 4.3377, 5.0542])
 
-        >>> LaguerrePolys(alpha=np.pi).lweight(torch.arange(4)) 
-        tensor([   -inf, -1.0000,  0.1776,  0.4514])
-
+        >>> alpha = -1/np.sqrt(3)
+        >>> loc = -np.pi 
+        >>> scale = -np.sqrt(3)
+        >>> p = LaguerrePolys(alpha=alpha,loc=loc,scale=scale)
+        >>> x = loc+scale*torch.rand((5,20),generator=rng)
+        >>> lrho = p.lweight(x) 
+        >>> lrho.shape
+        torch.Size([5, 20])
+        >>> lrhohat = alpha*torch.log((x-loc)/scale)-(x-loc)/scale-scipy.special.gammaln(alpha+1)-np.log(np.abs(scale))
+        >>> torch.allclose(lrho,lrhohat)
+        True
+        
         >>> p = LaguerrePolys(alpha=1/3,loc=np.pi,scale=np.exp(1))
         >>> p.a,p.b
         (3.141592653589793, inf)
@@ -257,22 +275,22 @@ class LaguerrePolys(AbstractOrthoPolys):
             loc = 0, 
             scale = 1, 
     ):
+        self.alpha = float(alpha) 
+        assert self.alpha > -1
+        self.c00 = 1
+        self.c11 = -1 
+        self.c10 = 1+self.alpha
         assert np.isfinite(loc)
         assert np.isfinite(scale)
         assert scale!=0
-        loc = float(loc) 
-        scale = float(scale)
+        loc = loc
+        scale = scale
         super().__init__(
             A = 1/scale,
             B = -loc/scale,
             a = loc if scale>0 else -np.inf, 
             b = np.inf if scale>0 else loc,
         )
-        self.alpha = float(alpha) 
-        assert self.alpha > -1
-        self.c00 = 1
-        self.c11 = -1 
-        self.c10 = 1+self.alpha
     
     def _lnorm(self, nrange):
         return torch.lgamma(nrange+self.alpha+1) - torch.lgamma(nrange+1) 
@@ -330,9 +348,20 @@ class JacobiPolys(AbstractOrthoPolys):
         >>> JacobiPolys(alpha=-1/2,beta=-3/4).lnorm(3)
         tensor([ 1.4838, -1.1552, -1.6942, -2.0527])
 
-        >>> JacobiPolys(alpha=-1/2,beta=-3/4).lweight(torch.arange(-2,3)/2) 
-        tensor([   inf, 0.3171, -0.0000, 0.0425,    inf])
-
+        >>> alpha = -1/2
+        >>> beta = -3/4 
+        >>> loc = -np.pi 
+        >>> scale = np.sqrt(3) 
+        >>> p = JacobiPolys(alpha=alpha,beta=beta,loc=loc,scale=scale)
+        >>> x = loc+scale*torch.rand((5,20),generator=rng)
+        >>> lrho = p.lweight(x) 
+        >>> lrho.shape
+        torch.Size([5, 20])
+        >>> lrhohat_const = -(1+alpha+beta)*np.log(2)-scipy.special.gammaln(alpha+1)-scipy.special.gammaln(beta+1)+scipy.special.gammaln(alpha+beta+2)-np.log(scipy.special.betainc(1+alpha,1+beta,1/2)+scipy.special.betainc(1+beta,1+alpha,1/2))-np.log(scale/2)
+        >>> lrhohat = lrhohat_const+alpha*torch.log(2-2*(x-loc)/scale)+beta*torch.log(2*(x-loc)/scale)
+        >>> torch.allclose(lrho,lrhohat)
+        True
+        
         >>> p = JacobiPolys(alpha=-1/2,beta=-3/4,loc=np.pi,scale=np.exp(1))
         >>> p.a,p.b
         (3.141592653589793, 5.859874482048838)
@@ -347,24 +376,24 @@ class JacobiPolys(AbstractOrthoPolys):
             loc = -1, 
             scale = 2,
     ):
+        self.alpha = float(alpha)
+        self.beta = float(beta)
+        assert self.alpha > -1 
+        assert self.beta > -1
+        self.c00 = 1
+        self.c11 = (self.alpha+self.beta+2)/2
+        self.c10 = (self.alpha+1)-(self.alpha+self.beta+2)/2
         assert np.isfinite(loc)
         assert np.isfinite(scale)
         assert scale>0
-        loc = float(loc) 
-        scale = float(scale)
+        loc = loc
+        scale = scale
         super().__init__(
             A = 2/scale,
             B = -2*loc/scale-1,
             a = loc, 
             b = loc+scale,
         )
-        self.alpha = float(alpha) 
-        self.beta = float(beta) 
-        assert self.alpha > -1 
-        assert self.beta > -1
-        self.c00 = 1
-        self.c11 = (self.alpha+self.beta+2)/2
-        self.c10 = (self.alpha+1)-(self.alpha+self.beta+2)/2
     
     def _lnorm(self, nrange):
         t0 = (1+self.alpha+self.beta)*np.log(2)+scipy.special.gammaln(self.alpha+1)+scipy.special.gammaln(self.beta+1)-scipy.special.gammaln(self.alpha+self.beta+2)+np.log(scipy.special.betainc(1+self.alpha,1+self.beta,1/2)+scipy.special.betainc(1+self.beta,1+self.alpha,1/2))
