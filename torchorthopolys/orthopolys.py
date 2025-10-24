@@ -34,16 +34,17 @@ class AbstractOrthoPolys(object):
         assert n>=0
         assert (x>=self.a).all()
         assert (x<=self.b).all()
+        z = self.A*x+self.B
         lC = self.lnorm(n)
         v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
-        y = torch.empty([n+1]+list(x.shape))
+        y = torch.empty([n+1]+list(z.shape))
         y[0] = self.c00
         if n>0:
-            y[1] = self.c11*x+self.c10
+            y[1] = self.c11*z+self.c10
         if n>1: 
             t1,t2,t3 = self.recur_terms(n)
             for i in range(1,n):
-                y[i+1] = (t1[i]*x+t2[i])*y[i]-t3[i]*y[i-1]
+                y[i+1] = (t1[i]*z+t2[i])*y[i]-t3[i]*y[i-1]
         return torch.einsum("i,i...->i...",v,y)
     
     def coeffs(self, n):
@@ -160,9 +161,27 @@ class HermitePolys(AbstractOrthoPolys):
         >>> lrho = p.lweight(x) 
         >>> lrho.shape
         torch.Size([5, 20])
-        >>> lrhohat = np.log(1)-np.log(2*np.pi)/2-np.log(scale)-((x-loc)/scale)**2/2
+        >>> lrhohat = torch.from_numpy(scipy.stats.norm.logpdf(x.numpy(),loc=loc,scale=scale))
         >>> torch.allclose(lrho,lrhohat)
         True
+
+        >>> loc = -np.pi 
+        >>> scale = np.exp(0)
+        >>> p = HermitePolys(loc=loc,scale=scale)
+        >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
+        >>> x = torch.from_numpy(scipy.stats.norm.ppf(u,loc=loc,scale=scale))
+        >>> y = p(4,x)
+        >>> print(y.shape)
+        torch.Size([5, 65536])
+        >>> c = (y[:,None]*y[None,:]).mean(-1)
+        >>> print(c.shape)
+        torch.Size([5, 5])
+        >>> print(c)
+        tensor([[ 1.0000e+00,  5.7021e-07, -2.4570e-05,  1.2231e-05, -2.2798e-04],
+                [ 5.7021e-07,  9.9997e-01,  2.1992e-05, -4.9851e-04,  1.5973e-04],
+                [-2.4570e-05,  2.1992e-05,  9.9937e-01,  2.4418e-04, -4.3017e-03],
+                [ 1.2231e-05, -4.9851e-04,  2.4418e-04,  9.9481e-01,  1.4077e-03],
+                [-2.2798e-04,  1.5973e-04, -4.3017e-03,  1.4077e-03,  9.7405e-01]])
 
         >>> p = HermitePolys(loc=np.pi,scale=np.exp(1))
         >>> p.a,p.b
