@@ -9,7 +9,7 @@ docplots:
 	cp polys.svg docs/polys.svg
 
 documls:
-	@pyreverse -k torchorthopolys/ -o svg 1>/dev/null && mv classes.svg docs/classes.svg
+	pyreverse -k torchorthopolys/ -o svg 1>/dev/null && mv classes.svg docs/classes.svg
 
 docsetup: docplots documls
 

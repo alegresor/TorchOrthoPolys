@@ -53,6 +53,7 @@ dev = [
     # "mkdocs-jupyter >= 0.25.0",
     "mkdocstrings-python >= 1.16.0",
     "pylint >= 3.0",
+    "graphviz >= 0.20.0",
 ]
 superdev = [
     "torchorthopolys[dev]",
