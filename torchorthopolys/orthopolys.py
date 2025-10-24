@@ -187,12 +187,13 @@ class HermitePolys(AbstractOrthoPolys):
             loc = loc, 
             scale = scale,
         )
+        self.distrib = torch.distributions.Normal(loc=self.loc,scale=self.scale)
     
     def _lnorm(self, nrange):
         return np.log(np.sqrt(np.pi))+nrange*np.log(2)+torch.lgamma(nrange+1)
     
     def _lweight(self, x):
-        return torch.distributions.Normal(loc=self.loc,scale=self.scale).log_prob(x)
+        return self.distrib.log_prob(x)
     
     def _recur_terms(self, nrange):
         t1 = 2+0*nrange
@@ -213,7 +214,7 @@ class LaguerrePolys(AbstractOrthoPolys):
 
         >>> alpha = -1/np.sqrt(3)
         >>> loc = -np.pi 
-        >>> scale = np.sqrt(3)
+        >>> scale = -np.sqrt(3)
         >>> p = LaguerrePolys(alpha=alpha,loc=loc,scale=scale)
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
@@ -284,17 +285,14 @@ class LaguerrePolys(AbstractOrthoPolys):
             loc = loc, 
             scale = scale,
         )
+        self.distrib = torch.distributions.Gamma(concentration=self.alpha+1,rate=1)
     
     def _lnorm(self, nrange):
-        return torch.lgamma(nrange+self.alpha+1) - torch.lgamma(nrange+1) 
+        return torch.lgamma(nrange+self.alpha+1)-torch.lgamma(nrange+1) 
     
     def _lweight(self, x):
         z = self.A*x+self.B
-        if self.scale>0:
-            lrho = torch.distributions.Gamma(concentration=self.alpha+1,rate=1).log_prob(z)
-        else: # scale<0
-            lrho = torch.distributions.Gamma(concentration=self.alpha+1,rate=1).log_prob(-z)
-        return np.log(np.abs(self.A))+lrho
+        return np.log(np.abs(self.A))+self.distrib.log_prob(z)
     
     def _recur_terms(self, nrange):
         t1 = -1/(nrange+1)
@@ -382,6 +380,7 @@ class JacobiPolys(AbstractOrthoPolys):
             loc = loc, 
             scale = scale,
         )
+        self.distrib = torch.distributions.Beta(self.beta+1,self.alpha+1)
     
     def _lnorm(self, nrange):
         t0 = (1+self.alpha+self.beta)*np.log(2)+scipy.special.gammaln(self.alpha+1)+scipy.special.gammaln(self.beta+1)-scipy.special.gammaln(self.alpha+self.beta+2)+np.log(scipy.special.betainc(1+self.alpha,1+self.beta,1/2)+scipy.special.betainc(1+self.beta,1+self.alpha,1/2))
@@ -392,7 +391,7 @@ class JacobiPolys(AbstractOrthoPolys):
     
     def _lweight(self, x):
         z = self.A*x+self.B
-        return np.log(np.abs(self.A))-np.log(2)+torch.distributions.Beta(self.beta+1,self.alpha+1).log_prob((1+z)/2)
+        return np.log(np.abs(self.A))-np.log(2)+self.distrib.log_prob((1+z)/2)
     
     def _recur_terms(self, nrange):
         t1num = (2*nrange+1+self.alpha+self.beta)*(2*nrange+2+self.alpha+self.beta)
@@ -402,4 +401,3 @@ class JacobiPolys(AbstractOrthoPolys):
         t3num = (nrange+self.alpha)*(nrange+self.beta)*(2*nrange+2+self.alpha+self.beta)
         t3denom = (nrange+1)*(nrange+1+self.alpha+self.beta)*(2*nrange+self.alpha+self.beta)
         return t1num/t1denom,t2num/t2denom,t3num/t3denom
-    
