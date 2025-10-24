@@ -1,10 +1,9 @@
-# `TorchOrthoPolys`
+# Orthonormal Polynomials in PyTorch
 
-[Classic orthogonal polynomials](https://en.wikipedia.org/wiki/Classical_orthogonal_polynomials) in [PyTorch](https://pytorch.org/). Orthonormal versions are also supported.
+[![](https://img.shields.io/badge/GitHub-fc7303)](https://github.com/alegresor/TorchOrthoPolys)
+[![Docs](https://github.com/alegresor/TorchOrthoPolys/actions/workflows/docs.yml/badge.svg?branch=main)](https://alegresor.github.io/TorchOrthoPolys/)
+[![Tests](https://github.com/alegresor/TorchOrthoPolys/actions/workflows/tests.yml/badge.svg?branch=main)](https://github.com/alegresor/TorchOrthoPolys/actions/workflows/tests.yml)
 
-- Chebyshev
-- Legendre
-- Hermite
-- Laguerre
-- Gegenbauer
-- Jacobi
+```bash
+pip install torchorthopolys
+```

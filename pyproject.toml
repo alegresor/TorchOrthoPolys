@@ -26,12 +26,12 @@ keywords = [
         "orthogonal",
         "orthonormal",
         "polynomials",
-        "Chebyshev",
-        "Legendre",
         "Hermite",
         "Laguerre",
-        "Gegenbauer",
         "Jacobi",
+        "Gegenbauer",
+        "Chebyshev",
+        "Legendre",
     ]
 license = "GPL-3.0"
 dynamic = ["version"]
@@ -46,11 +46,11 @@ dependencies = [
 dev = [
     "pytest >= 8.3.5",
     "nbval >= 0.10.0",
-    "jupyterlab >= 4.0.0",
+    # "jupyterlab >= 4.0.0",
     "matplotlib >= 3.9.0",
     "mkdocs >= 1.5.0",
     "mkdocs-material >= 9.6.12",
-    "mkdocs-jupyter >= 0.25.0",
+    # "mkdocs-jupyter >= 0.25.0",
     "mkdocstrings-python >= 1.16.0",
 ]
 superdev = [

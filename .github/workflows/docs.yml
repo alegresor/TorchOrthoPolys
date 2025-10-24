@@ -25,10 +25,7 @@ jobs:
           path: .cache 
           restore-keys: |
             mkdocs-material-
-      - run: pip install mkdocs-material 
-      - run: pip install mkdocstrings
-      - run: pip install mkdocstrings-python
-      - run: pip install mkdocs-jupyter
+      - run: pip install -e .[dev]
       - run: python plot.py
       - run: cp polys.svg docs/polys.svg
       - run: mkdocs gh-deploy --force
