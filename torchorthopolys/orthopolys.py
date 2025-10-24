@@ -109,13 +109,13 @@ class HermitePolys(AbstractOrthoPolys):
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
 
-        >>> p = HermitePolys()
+        >>> poly = HermitePolys()
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.norm.ppf(u,scale=1/np.sqrt(2)))
         >>> n = 4
         
-        >>> y = p(n,x)
+        >>> y = poly(n,x)
         >>> y.shape
         torch.Size([5, 65536])
         >>> (y[:,None]*y[None,:]).mean(-1)
@@ -125,18 +125,18 @@ class HermitePolys(AbstractOrthoPolys):
                 [ 1.2231e-05, -4.9851e-04,  2.4418e-04,  9.9481e-01,  1.4077e-03],
                 [-2.2798e-04,  1.5973e-04, -4.3017e-03,  1.4077e-03,  9.7405e-01]])
         
-        >>> lrho = p.lweight(x) 
+        >>> lrho = poly.lweight(x) 
         >>> lrhohat = torch.from_numpy(scipy.stats.norm.logpdf(x.numpy(),scale=1/np.sqrt(2)))
         >>> assert torch.allclose(lrho,lrhohat)
 
-        >>> Cs = torch.exp(p.lnorm(n))
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],2*x)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],4*x**2-2)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],8*x**3-12*x)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],16*x**4-48*x**2+12)
+        >>> Cs = torch.exp(poly.lnorm(n))
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],2*x)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],4*x**2-2)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],8*x**3-12*x)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],16*x**4-48*x**2+12)
 
-        >>> coeffs = p.coeffs(n)
+        >>> coeffs = poly.coeffs(n)
         >>> coeffs.shape
         torch.Size([5, 5])
         >>> coeffs
@@ -187,13 +187,13 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> rng = torch.Generator().manual_seed(17)
 
         >>> alpha = -1/np.sqrt(3)
-        >>> p = LaguerrePolys(alpha=alpha)
+        >>> poly = LaguerrePolys(alpha=alpha)
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.gamma.ppf(u,a=alpha+1))
         >>> n = 4
 
-        >>> y = p(n,x)
+        >>> y = poly(n,x)
         >>> y.shape
         torch.Size([5, 65536])
         >>> (y[:,None]*y[None,:]).mean(-1)
@@ -203,18 +203,18 @@ class LaguerrePolys(AbstractOrthoPolys):
                 [ 4.2222e-04, -8.2370e-03,  5.1614e-02,  8.3976e-01,  2.5730e-01],
                 [-6.7890e-04,  1.2887e-02, -8.0659e-02,  2.5730e-01,  5.5508e-01]])
        
-        >>> lrho = p.lweight(x) 
+        >>> lrho = poly.lweight(x) 
         >>> lrhohat = torch.from_numpy(scipy.stats.gamma.logpdf(x.numpy(),a=alpha+1))
         >>> assert torch.allclose(lrho,lrhohat,atol=1e-3)
 
-        >>> Cs = torch.exp(p.lnorm(n)) 
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],-x+alpha+1)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],1/2*(x**2-2*(alpha+2)*x+(alpha+1)*(alpha+2)))
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],1/6*(-x**3+3*(alpha+3)*x**2-3*(alpha+2)*(alpha+3)*x+(alpha+1)*(alpha+2)*(alpha+3)))
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],1/24*(x**4-4*(alpha+4)*x**3+6*(alpha+3)*(alpha+4)*x**2-4*(alpha+2)*(alpha+3)*(alpha+4)*x+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)))
+        >>> Cs = torch.exp(poly.lnorm(n)) 
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],-x+alpha+1)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],1/2*(x**2-2*(alpha+2)*x+(alpha+1)*(alpha+2)))
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],1/6*(-x**3+3*(alpha+3)*x**2-3*(alpha+2)*(alpha+3)*x+(alpha+1)*(alpha+2)*(alpha+3)))
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],1/24*(x**4-4*(alpha+4)*x**3+6*(alpha+3)*(alpha+4)*x**2-4*(alpha+2)*(alpha+3)*(alpha+4)*x+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)))
 
-        >>> coeffs = p.coeffs(n)
+        >>> coeffs = poly.coeffs(n)
         >>> coeffs.shape
         torch.Size([5, 5])
         >>> coeffs
@@ -272,13 +272,13 @@ class JacobiPolys(AbstractOrthoPolys):
 
         >>> alpha = 1/2
         >>> beta = 3/4 
-        >>> p = JacobiPolys(alpha=alpha,beta=beta)
+        >>> poly = JacobiPolys(alpha=alpha,beta=beta)
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.beta.ppf(u,a=beta+1,b=alpha+1,loc=-1,scale=2))
         >>> n = 4
         
-        >>> y = p(n,x)
+        >>> y = poly(n,x)
         >>> y.shape
         torch.Size([5, 65536])
         >>> (y[:,None]*y[None,:]).mean(-1)
@@ -288,16 +288,16 @@ class JacobiPolys(AbstractOrthoPolys):
                 [ 1.9097e-07, -7.7976e-07,  1.1397e-06,  1.0000e+00,  3.6799e-06],
                 [-6.1552e-07,  1.0676e-06, -2.8870e-06,  3.6799e-06,  9.9999e-01]])
 
-        >>> lrho = p.lweight(x) 
+        >>> lrho = poly.lweight(x) 
         >>> lrhohat = torch.from_numpy(scipy.stats.beta.logpdf(x.numpy(),a=beta+1,b=alpha+1,loc=-1,scale=2))
         >>> assert torch.allclose(lrho,lrhohat,1e-3)
         
-        >>> Cs = torch.exp(p.lnorm(n))
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],(alpha+1)+(alpha+beta+2)*(x-1)/2)
-        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(x-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((x-1)/2)**2)
+        >>> Cs = torch.exp(poly.lnorm(n))
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],(alpha+1)+(alpha+beta+2)*(x-1)/2)
+        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(x-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((x-1)/2)**2)
 
-        >>> coeffs = p.coeffs(n)
+        >>> coeffs = poly.coeffs(n)
         >>> coeffs.shape
         torch.Size([5, 5])
         >>> coeffs
@@ -351,3 +351,58 @@ class JacobiPolys(AbstractOrthoPolys):
         t3num = (nrange+self.alpha)*(nrange+self.beta)*(2*nrange+2+self.alpha+self.beta)
         t3denom = (nrange+1)*(nrange+1+self.alpha+self.beta)*(2*nrange+self.alpha+self.beta)
         return t1num/t1denom,t2num/t2denom,t3num/t3denom
+
+class Gegenbauer(JacobiPolys):
+    
+    r"""
+    Orthonormal [Gegenbauer polynomials](https://en.wikipedia.org/wiki/Gegenbauer_polynomials) 
+    supported on $[-1,1]$ with the weight normalized to be a density function. 
+    
+    These are a special case of the Jacobi polynomials with $\alpha=\beta$.
+    """
+
+    def __init__(self, alpha=0):
+        r"""
+        Args:
+            alpha (float): parameter $\alpha>-1$.
+        """
+        self.alpha = float(alpha)
+        super().__init__(alpha=alpha,beta=alpha)
+
+
+class Chebyshev1(Gegenbauer):
+
+    r"""
+    Orthonormal [Chebyshev polynomials](https://en.wikipedia.org/wiki/Chebyshev_polynomials) of the first kind
+    supported on $[-1,1]$ with the weight normalized to be a density function. 
+    
+    These are a special case of the Gegenbauer polynomials with $\alpha=-1/2$.
+    """
+
+    def __init__(self):
+        super().__init__(alpha=-1/2)
+
+
+class Chebyshev2(Gegenbauer):
+
+    r"""
+    Orthonormal [Chebyshev polynomials](https://en.wikipedia.org/wiki/Chebyshev_polynomials) of the second kind
+    supported on $[-1,1]$ with the weight normalized to be a density function. 
+    
+    These are a special case of the Gegenbauer polynomials with $\alpha=1/2$.
+    """
+
+    def __init__(self):
+        super().__init__(alpha=1/2)
+    
+class Legendre(Gegenbauer):
+
+    r"""
+    Orthonormal [Legendre polynomials](https://en.wikipedia.org/wiki/Legendre_polynomials) 
+    supported on $[-1,1]$ with the weight normalized to be a density function. 
+    
+    These are a special case of the Gegenbauer polynomials with $\alpha=0$.
+    """
+
+    def __init__(self):
+        super().__init__(alpha=0)
