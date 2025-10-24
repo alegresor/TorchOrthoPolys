@@ -120,71 +120,47 @@ class HermitePolys(AbstractOrthoPolys):
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
 
-        >>> p = HermitePolys()
-        >>> n = 4
-        >>> x = torch.rand((2,3),generator=rng)
-        >>> y = p(n,x)
-        >>> y.shape
-        torch.Size([5, 2, 3])
-        
-        >>> Cs = torch.exp(p.lnorm(n))
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],2*x)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],4*x**2-2)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],8*x**3-12*x)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],16*x**4-48*x**2+12)
-        True
-
-        >>> coeffs = p.coeffs(n)
-        >>> coeffs.shape
-        torch.Size([5, 5])
-        >>> xpows = x[...,None]**torch.arange(n+1)
-        >>> xpows.shape
-        torch.Size([2, 3, 5])
-        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
-        >>> yhat.shape
-        torch.Size([5, 2, 3])
-        >>> torch.allclose(y,yhat)
-        True
-
-        >>> HermitePolys().lnorm(3) 
-        tensor([0.5724, 1.2655, 2.6518, 4.4436])
-
         >>> loc = -np.pi 
         >>> scale = np.sqrt(3) 
         >>> p = HermitePolys(loc=loc,scale=scale)
-        >>> x = loc+scale*torch.randn((5,20),generator=rng)
-        >>> lrho = p.lweight(x) 
-        >>> lrho.shape
-        torch.Size([5, 20])
-        >>> lrhohat = torch.from_numpy(scipy.stats.norm.logpdf(x.numpy(),loc=loc,scale=scale))
-        >>> torch.allclose(lrho,lrhohat)
-        True
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.norm.ppf(u,loc=loc,scale=scale))
-        >>> y = p(4,x)
-        >>> print(y.shape)
+        >>> n = 4
+        
+        >>> y = p(n,x)
+        >>> y.shape
         torch.Size([5, 65536])
-        >>> c = (y[:,None]*y[None,:]).mean(-1)
-        >>> c.shape
-        torch.Size([5, 5])
-        >>> c
+        >>> (y[:,None]*y[None,:]).mean(-1)
         tensor([[ 1.0000e+00,  5.7021e-07, -2.4570e-05,  1.2231e-05, -2.2798e-04],
                 [ 5.7021e-07,  9.9997e-01,  2.1992e-05, -4.9851e-04,  1.5973e-04],
                 [-2.4570e-05,  2.1992e-05,  9.9937e-01,  2.4418e-04, -4.3017e-03],
                 [ 1.2231e-05, -4.9851e-04,  2.4418e-04,  9.9481e-01,  1.4077e-03],
                 [-2.2798e-04,  1.5973e-04, -4.3017e-03,  1.4077e-03,  9.7405e-01]])
+        
+        >>> lrho = p.lweight(x) 
+        >>> lrhohat = torch.from_numpy(scipy.stats.norm.logpdf(x.numpy(),loc=loc,scale=scale))
+        >>> assert torch.allclose(lrho,lrhohat)
 
-        >>> p = HermitePolys(loc=np.pi,scale=np.exp(1))
-        >>> p.a,p.b
-        (-inf, inf)
-        >>> p.A,p.B
-        (0.2601300475114444, -0.8172226462399177)
+        >>> Cs = torch.exp(p.lnorm(n))
+        >>> z = p.A*x+p.B
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*z)
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],2*z)
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],4*z**2-2)
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],8*z**3-12*z)
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],16*z**4-48*z**2+12)
+
+        >>> coeffs = p.coeffs(n)
+        >>> coeffs.shape
+        torch.Size([5, 5])
+        >>> zpows = z[...,None]**torch.arange(n+1)
+        >>> zpows.shape
+        torch.Size([65536, 5])
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,zpows) # generally unstable
+        >>> yhat.shape
+        torch.Size([5, 65536])
+        >>> torch.allclose(y,yhat)
+        True
     """
 
     def __init__(
