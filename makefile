@@ -1,2 +1,8 @@
-doctests: 
-	pytest --doctest-modules torchorthopolys/ -W ignore --no-header
+test: 
+	pytest --doctest-modules torchorthopolys/ --no-header
+
+testaccept:
+	pytest --doctest-modules torchorthopolys/ --no-header --accept
+
+doc:
+	mkdocs serve --livereload

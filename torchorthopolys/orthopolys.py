@@ -7,13 +7,7 @@ class AbstractOrthoPolys(object):
     Abstract class for [classic orthogonal polynomials](https://en.wikipedia.org/wiki/Classical_orthogonal_polynomials#Table_of_classical_orthogonal_polynomials). 
     """
 
-    def __init__(
-            self, 
-            a, 
-            b,
-    ):
-        self.a = float(a) 
-        self.b = float(b)
+    def __init__(self):
         self.factor_lweight = float(2*np.log(self.c00)-float(self.lnorm(0)))
 
     def __call__(self, n, x):
@@ -145,6 +139,12 @@ class HermitePolys(AbstractOrthoPolys):
         >>> coeffs = p.coeffs(n)
         >>> coeffs.shape
         torch.Size([5, 5])
+        >>> coeffs
+        tensor([[ 1.0000,  0.0000,  0.0000,  0.0000,  0.0000],
+                [ 0.0000,  1.4142,  0.0000,  0.0000,  0.0000],
+                [-0.7071,  0.0000,  1.4142,  0.0000,  0.0000],
+                [-0.0000, -1.7321,  0.0000,  1.1547,  0.0000],
+                [ 0.6124, -0.0000, -2.4495,  0.0000,  0.8165]])
         >>> xpows = x[...,None]**torch.arange(n+1)
         >>> xpows.shape
         torch.Size([65536, 5])
@@ -154,17 +154,14 @@ class HermitePolys(AbstractOrthoPolys):
         >>> assert torch.allclose(y,yhat)
     """
 
-    def __init__(
-            self,
-    ):
+    def __init__(self):
         self.c00 = 1
         self.c11 = 2 
         self.c10 = 0
-        super().__init__(
-            a = -np.inf, 
-            b = np.inf,
-        )
+        self.a = float(-np.inf) 
+        self.b = float(np.inf) 
         self.distrib = torch.distributions.Normal(0,1/np.sqrt(2))
+        super().__init__()
     
     def _lnorm(self, nrange):
         return np.log(np.sqrt(np.pi))+nrange*np.log(2)+torch.lgamma(nrange+1)
@@ -183,7 +180,7 @@ class LaguerrePolys(AbstractOrthoPolys):
 
     r"""
     Orthonormal [Generalized Laguerre polynomials](https://en.wikipedia.org/wiki/Laguerre_polynomials#Generalized_Laguerre_polynomials)
-    supported on $[a,\infty)$ or $(-\infty,a]$ with the weight normalized to be a density function. 
+    supported on $[0,\infty)$ with the weight normalized to be a density function. 
 
     Examples:
         >>> torch.set_default_dtype(torch.float64)
@@ -220,6 +217,12 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> coeffs = p.coeffs(n)
         >>> coeffs.shape
         torch.Size([5, 5])
+        >>> coeffs
+        tensor([[ 1.0000,  0.0000,  0.0000,  0.0000,  0.0000],
+                [ 0.6501, -1.5382,  0.0000,  0.0000,  0.0000],
+                [ 0.5483, -2.5946,  0.9119,  0.0000,  0.0000],
+                [ 0.4927, -3.4974,  2.4584, -0.3383,  0.0000],
+                [ 0.4558, -4.3136,  4.5481, -1.2516,  0.0914]])
         >>> xpows = x[...,None]**torch.arange(n+1)
         >>> xpows.shape
         torch.Size([65536, 5])
@@ -229,20 +232,20 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> assert torch.allclose(y,yhat)
     """
 
-    def __init__(
-            self,
-            alpha = 0,
-    ):
+    def __init__(self, alpha=0):
+        r"""
+        Args:
+            alpha (float): parameter $\alpha>-1$.
+        """
         self.alpha = float(alpha) 
         assert self.alpha > -1
         self.c00 = 1
         self.c11 = -1 
         self.c10 = 1+self.alpha
-        super().__init__(
-            a = 0,
-            b = np.inf,
-        )
+        self.a = float(0) 
+        self.b = float(np.inf)
         self.distrib = torch.distributions.Gamma(concentration=self.alpha+1,rate=1)
+        super().__init__()
     
     def _lnorm(self, nrange):
         return torch.lgamma(nrange+self.alpha+1)-torch.lgamma(nrange+1) 
@@ -261,7 +264,7 @@ class JacobiPolys(AbstractOrthoPolys):
 
     r"""
     Orthonormal [Jacobi polynomials](https://en.wikipedia.org/wiki/Jacobi_polynomials) 
-    supported on $[a,b]$ with the weight normalized to be a density function. 
+    supported on $[-1,1]$ with the weight normalized to be a density function. 
 
     Examples:
         >>> torch.set_default_dtype(torch.float64)
@@ -297,6 +300,12 @@ class JacobiPolys(AbstractOrthoPolys):
         >>> coeffs = p.coeffs(n)
         >>> coeffs.shape
         torch.Size([5, 5])
+        >>> coeffs
+        tensor([[  1.0000,   0.0000,   0.0000,   0.0000,   0.0000],
+                [ -0.1591,   2.0677,   0.0000,   0.0000,   0.0000],
+                [ -0.9729,  -0.3985,   4.1846,   0.0000,   0.0000],
+                [  0.1742,  -4.0069,  -0.8711,   8.4202,   0.0000],
+                [  0.9690,   0.7848, -12.2100,  -1.8273,  16.9029]])
         >>> xpows = x[...,None]**torch.arange(n+1)
         >>> xpows.shape
         torch.Size([65536, 5])
@@ -306,11 +315,12 @@ class JacobiPolys(AbstractOrthoPolys):
         >>> assert torch.allclose(y,yhat)
     """
     
-    def __init__(
-            self,
-            alpha = 0,
-            beta = 0,
-    ):
+    def __init__(self, alpha=0, beta=0):
+        r"""
+        Args:
+            alpha (float): parameter $\alpha>-1$.
+            beta (float): parameter $\beta>-1$.
+        """
         self.alpha = float(alpha)
         self.beta = float(beta)
         assert self.alpha > -1 
@@ -318,11 +328,10 @@ class JacobiPolys(AbstractOrthoPolys):
         self.c00 = 1
         self.c11 = (self.alpha+self.beta+2)/2
         self.c10 = (self.alpha+1)-(self.alpha+self.beta+2)/2
-        super().__init__(
-            a = -1, 
-            b = 1,
-        )
+        self.a = float(-1) 
+        self.b = float(1) 
         self.distrib = torch.distributions.Beta(self.beta+1,self.alpha+1)
+        super().__init__()
     
     def _lnorm(self, nrange):
         t0 = (1+self.alpha+self.beta)*np.log(2)+scipy.special.gammaln(self.alpha+1)+scipy.special.gammaln(self.beta+1)-scipy.special.gammaln(self.alpha+self.beta+2)+np.log(scipy.special.betainc(1+self.alpha,1+self.beta,1/2)+scipy.special.betainc(1+self.beta,1+self.alpha,1/2))
