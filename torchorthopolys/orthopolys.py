@@ -165,18 +165,15 @@ class HermitePolys(AbstractOrthoPolys):
         >>> torch.allclose(lrho,lrhohat)
         True
 
-        >>> loc = -np.pi 
-        >>> scale = np.exp(0)
-        >>> p = HermitePolys(loc=loc,scale=scale)
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.norm.ppf(u,loc=loc,scale=scale))
         >>> y = p(4,x)
         >>> print(y.shape)
         torch.Size([5, 65536])
         >>> c = (y[:,None]*y[None,:]).mean(-1)
-        >>> print(c.shape)
+        >>> c.shape
         torch.Size([5, 5])
-        >>> print(c)
+        >>> c
         tensor([[ 1.0000e+00,  5.7021e-07, -2.4570e-05,  1.2231e-05, -2.2798e-04],
                 [ 5.7021e-07,  9.9997e-01,  2.1992e-05, -4.9851e-04,  1.5973e-04],
                 [-2.4570e-05,  2.1992e-05,  9.9937e-01,  2.4418e-04, -4.3017e-03],
@@ -278,9 +275,22 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> lrho = p.lweight(x) 
         >>> lrho.shape
         torch.Size([5, 20])
-        >>> lrhohat = alpha*torch.log((x-loc)/scale)-(x-loc)/scale-scipy.special.gammaln(alpha+1)-np.log(np.abs(scale))
+        >>> lrhohat = torch.from_numpy(scipy.stats.gamma.logpdf(-x.numpy(),a=alpha+1,loc=-loc,scale=-scale))
         >>> torch.allclose(lrho,lrhohat)
         True
+
+        >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
+        >>> x = -torch.from_numpy(scipy.stats.gamma.ppf(u,a=alpha+1,loc=-loc,scale=-scale))
+        >>> y = p(4,x)
+        >>> c = (y[:,None]*y[None,:]).mean(-1)
+        >>> c.shape
+        torch.Size([5, 5])
+        >>> c
+        tensor([[ 1.0000e+00,  1.1409e-05, -1.1488e-04,  4.2222e-04, -6.7890e-04],
+                [ 1.1409e-05,  9.9967e-01,  2.4873e-03, -8.2370e-03,  1.2887e-02],
+                [-1.1488e-04,  2.4873e-03,  9.8360e-01,  5.1614e-02, -8.0659e-02],
+                [ 4.2222e-04, -8.2370e-03,  5.1614e-02,  8.3976e-01,  2.5730e-01],
+                [-6.7890e-04,  1.2887e-02, -8.0659e-02,  2.5730e-01,  5.5508e-01]])
         
         >>> p = LaguerrePolys(alpha=1/3,loc=np.pi,scale=np.exp(1))
         >>> p.a,p.b
@@ -383,10 +393,22 @@ class JacobiPolys(AbstractOrthoPolys):
         >>> lrho = p.lweight(x) 
         >>> lrho.shape
         torch.Size([5, 20])
-        >>> lrhohat_const = -(1+alpha+beta)*np.log(2)-scipy.special.gammaln(alpha+1)-scipy.special.gammaln(beta+1)+scipy.special.gammaln(alpha+beta+2)-np.log(scipy.special.betainc(1+alpha,1+beta,1/2)+scipy.special.betainc(1+beta,1+alpha,1/2))-np.log(scale/2)
-        >>> lrhohat = lrhohat_const+alpha*torch.log(2-2*(x-loc)/scale)+beta*torch.log(2*(x-loc)/scale)
+        >>> lrhohat = torch.from_numpy(scipy.stats.beta.logpdf(x.numpy(),a=beta+1,b=alpha+1,loc=loc,scale=scale))
         >>> torch.allclose(lrho,lrhohat)
         True
+
+        >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
+        >>> x = torch.from_numpy(scipy.stats.beta.ppf(u,a=beta+1,b=alpha+1,loc=loc,scale=scale))
+        >>> y = p(4,x)
+        >>> c = (y[:,None]*y[None,:]).mean(-1)
+        >>> c.shape
+        torch.Size([5, 5])
+        >>> c
+        tensor([[ 1.0000e+00, -1.3068e-09, -4.9899e-10, -1.1725e-09, -5.5519e-10],
+                [-1.3068e-09,  1.0000e+00, -1.9337e-09, -1.2962e-09, -1.8712e-09],
+                [-4.9899e-10, -1.9337e-09,  1.0000e+00, -1.8116e-09, -1.3395e-09],
+                [-1.1725e-09, -1.2962e-09, -1.8116e-09,  1.0000e+00, -1.7744e-09],
+                [-5.5519e-10, -1.8712e-09, -1.3395e-09, -1.7744e-09,  1.0000e+00]])
         
         >>> p = JacobiPolys(alpha=-1/2,beta=-3/4,loc=np.pi,scale=np.exp(1))
         >>> p.a,p.b
