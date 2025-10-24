@@ -99,7 +99,7 @@ class AbstractOrthoPolys(object):
         return y
 
 
-class HermitePolys(AbstractOrthoPolys):
+class Hermite(AbstractOrthoPolys):
 
     r"""
     Orthonormal [Hermite polynomials](https://en.wikipedia.org/wiki/Hermite_polynomials)
@@ -109,7 +109,7 @@ class HermitePolys(AbstractOrthoPolys):
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
 
-        >>> poly = HermitePolys()
+        >>> poly = Hermite()
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.norm.ppf(u,scale=1/np.sqrt(2)))
@@ -176,7 +176,7 @@ class HermitePolys(AbstractOrthoPolys):
         return t1,t2,t3
     
 
-class LaguerrePolys(AbstractOrthoPolys):
+class Laguerre(AbstractOrthoPolys):
 
     r"""
     Orthonormal [Generalized Laguerre polynomials](https://en.wikipedia.org/wiki/Laguerre_polynomials#Generalized_Laguerre_polynomials)
@@ -187,7 +187,7 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> rng = torch.Generator().manual_seed(17)
 
         >>> alpha = -1/np.sqrt(3)
-        >>> poly = LaguerrePolys(alpha=alpha)
+        >>> poly = Laguerre(alpha=alpha)
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.gamma.ppf(u,a=alpha+1))
@@ -260,7 +260,7 @@ class LaguerrePolys(AbstractOrthoPolys):
         return t1,t2,t3
 
 
-class JacobiPolys(AbstractOrthoPolys):
+class Jacobi(AbstractOrthoPolys):
 
     r"""
     Orthonormal [Jacobi polynomials](https://en.wikipedia.org/wiki/Jacobi_polynomials) 
@@ -272,7 +272,7 @@ class JacobiPolys(AbstractOrthoPolys):
 
         >>> alpha = 1/2
         >>> beta = 3/4 
-        >>> poly = JacobiPolys(alpha=alpha,beta=beta)
+        >>> poly = Jacobi(alpha=alpha,beta=beta)
 
         >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
         >>> x = torch.from_numpy(scipy.stats.beta.ppf(u,a=beta+1,b=alpha+1,loc=-1,scale=2))
@@ -352,7 +352,7 @@ class JacobiPolys(AbstractOrthoPolys):
         t3denom = (nrange+1)*(nrange+1+self.alpha+self.beta)*(2*nrange+self.alpha+self.beta)
         return t1num/t1denom,t2num/t2denom,t3num/t3denom
 
-class Gegenbauer(JacobiPolys):
+class Gegenbauer(Jacobi):
     
     r"""
     Orthonormal [Gegenbauer polynomials](https://en.wikipedia.org/wiki/Gegenbauer_polynomials) 
