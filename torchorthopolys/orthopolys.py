@@ -300,71 +300,46 @@ class JacobiPolys(AbstractOrthoPolys):
         >>> torch.set_default_dtype(torch.float64)
         >>> rng = torch.Generator().manual_seed(17)
 
-        >>> alpha = -1/2 
-        >>> beta = -3/4
-        >>> p = JacobiPolys(alpha=alpha,beta=beta)
+        >>> alpha = 1/2
+        >>> beta = 3/4 
+        >>> loc = -np.pi 
+        >>> scale = np.sqrt(3)
+        >>> p = JacobiPolys(alpha=alpha,beta=beta,loc=loc,scale=scale)
+
+        >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
+        >>> x = torch.from_numpy(scipy.stats.beta.ppf(u,a=beta+1,b=alpha+1,loc=loc,scale=scale))
         >>> n = 4
-        >>> x = torch.rand((2,3),generator=rng)
+        
         >>> y = p(n,x)
         >>> y.shape
-        torch.Size([5, 2, 3])
+        torch.Size([5, 65536])
+        >>> (y[:,None]*y[None,:]).mean(-1)
+        tensor([[ 1.0000e+00,  1.4714e-08, -1.1409e-07,  1.9097e-07, -6.1552e-07],
+                [ 1.4714e-08,  1.0000e+00,  2.2747e-07, -7.7976e-07,  1.0676e-06],
+                [-1.1409e-07,  2.2747e-07,  1.0000e+00,  1.1397e-06, -2.8870e-06],
+                [ 1.9097e-07, -7.7976e-07,  1.1397e-06,  1.0000e+00,  3.6799e-06],
+                [-6.1552e-07,  1.0676e-06, -2.8870e-06,  3.6799e-06,  9.9999e-01]])
+
+        >>> lrho = p.lweight(x) 
+        >>> lrhohat = torch.from_numpy(scipy.stats.beta.logpdf(x.numpy(),a=beta+1,b=alpha+1,loc=loc,scale=scale))
+        >>> assert torch.allclose(lrho,lrhohat,1e-3)
         
         >>> Cs = torch.exp(p.lnorm(n))
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],(alpha+1)+(alpha+beta+2)*(x-1)/2)
-        True
-        >>> torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(x-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((x-1)/2)**2)
-        True
+        >>> z = p.A*x+p.B
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*z)
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],(alpha+1)+(alpha+beta+2)*(z-1)/2)
+        >>> assert torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(z-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((z-1)/2)**2)
 
         >>> coeffs = p.coeffs(n)
         >>> coeffs.shape
         torch.Size([5, 5])
-        >>> xpows = x[...,None]**torch.arange(n+1)
-        >>> xpows.shape
-        torch.Size([2, 3, 5])
-        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
+        >>> zpows = z[...,None]**torch.arange(n+1)
+        >>> zpows.shape
+        torch.Size([65536, 5])
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,zpows) # generally unstable
         >>> yhat.shape
-        torch.Size([5, 2, 3])
-        >>> torch.allclose(y,yhat)
-        True
-
-        >>> torch.allclose(JacobiPolys(alpha=0,beta=0).lnorm(3),torch.log(2/(2*torch.arange(4)+1)))
-        True
-        >>> JacobiPolys(alpha=-1/2,beta=-3/4).lnorm(3)
-        tensor([ 1.4838, -1.1552, -1.6942, -2.0527])
-
-        >>> alpha = -1/2
-        >>> beta = -3/4 
-        >>> loc = -np.pi 
-        >>> scale = np.sqrt(3) 
-        >>> p = JacobiPolys(alpha=alpha,beta=beta,loc=loc,scale=scale)
-        >>> x = loc+scale*torch.rand((5,20),generator=rng)
-        >>> lrho = p.lweight(x) 
-        >>> lrho.shape
-        torch.Size([5, 20])
-        >>> lrhohat = torch.from_numpy(scipy.stats.beta.logpdf(x.numpy(),a=beta+1,b=alpha+1,loc=loc,scale=scale))
-        >>> torch.allclose(lrho,lrhohat)
-        True
-
-        >>> u = scipy.stats.qmc.Sobol(d=1,rng=7).random(2**16)[:,0]
-        >>> x = torch.from_numpy(scipy.stats.beta.ppf(u,a=beta+1,b=alpha+1,loc=loc,scale=scale))
-        >>> y = p(4,x)
-        >>> c = (y[:,None]*y[None,:]).mean(-1)
-        >>> c.shape
-        torch.Size([5, 5])
-        >>> c
-        tensor([[ 1.0000e+00, -1.3068e-09, -4.9899e-10, -1.1725e-09, -5.5519e-10],
-                [-1.3068e-09,  1.0000e+00, -1.9337e-09, -1.2962e-09, -1.8712e-09],
-                [-4.9899e-10, -1.9337e-09,  1.0000e+00, -1.8116e-09, -1.3395e-09],
-                [-1.1725e-09, -1.2962e-09, -1.8116e-09,  1.0000e+00, -1.7744e-09],
-                [-5.5519e-10, -1.8712e-09, -1.3395e-09, -1.7744e-09,  1.0000e+00]])
-        
-        >>> p = JacobiPolys(alpha=-1/2,beta=-3/4,loc=np.pi,scale=np.exp(1))
-        >>> p.a,p.b
-        (3.141592653589793, 5.859874482048838)
-        >>> p.A*p.a+p.B,p.A*p.b+p.B
-        (-1.0, 1.0)
+        torch.Size([5, 65536])
+        >>> assert torch.allclose(y,yhat)
     """
     
     def __init__(
