@@ -26,6 +26,5 @@ jobs:
           restore-keys: |
             mkdocs-material-
       - run: pip install -e .[dev]
-      - run: python plot.py
-      - run: cp polys.svg docs/polys.svg
+      - run: make docsetup
       - run: mkdocs gh-deploy --force
