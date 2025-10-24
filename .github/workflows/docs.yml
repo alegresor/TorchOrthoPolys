@@ -25,6 +25,7 @@ jobs:
           path: .cache 
           restore-keys: |
             mkdocs-material-
+      - uses: ts-graphviz/setup-graphviz@v2
       - run: pip install -e .[dev]
       - run: make docsetup
       - run: mkdocs gh-deploy --force
