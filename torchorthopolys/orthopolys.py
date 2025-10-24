@@ -34,15 +34,17 @@ class AbstractOrthoPolys(object):
         assert n>=0
         assert (x>=self.a).all()
         assert (x<=self.b).all()
+        lC = self.lnorm(n)
+        v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
         y = torch.empty([n+1]+list(x.shape))
         y[0] = self.c00
-        if n==0: return y 
-        y[1] = self.c11*x+self.c10
-        if n==1: return y 
-        t1,t2,t3 = self.recur_terms(n)
-        for i in range(1,n):
-            y[i+1] = (t1[i]*x+t2[i])*y[i]-t3[i]*y[i-1]
-        return y
+        if n>0:
+            y[1] = self.c11*x+self.c10
+        if n>1: 
+            t1,t2,t3 = self.recur_terms(n)
+            for i in range(1,n):
+                y[i+1] = (t1[i]*x+t2[i])*y[i]-t3[i]*y[i-1]
+        return torch.einsum("i,i...->i...",v,y)
     
     def coeffs(self, n):
         r"""
@@ -55,18 +57,20 @@ class AbstractOrthoPolys(object):
             c (torch.Tensor): coefficients with shape `[n+1,n+1]`.
         """
         assert n>=0 
+        lC = self.lnorm(n)
+        v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
         c = torch.zeros((n+1,n+1))
         c[0,0] = self.c00
-        if n==0: return c
-        c[1,0] = self.c10
-        c[1,1] = self.c11
-        if n==1: return c
-        t1,t2,t3 = self.recur_terms(n)
-        for i in range(1,n):
-            c[i+1,:i] = -t3[i]*c[i-1,:i]
-            c[i+1,:(i+1)] = c[i+1,:(i+1)]+t2[i]*c[i,:(i+1)]
-            c[i+1,1:(i+2)] = c[i+1,1:(i+2)]+t1[i]*c[i,:(i+1)]
-        return c
+        if n>0:
+            c[1,0] = self.c10
+            c[1,1] = self.c11
+        if n>1:
+            t1,t2,t3 = self.recur_terms(n)
+            for i in range(1,n):
+                c[i+1,:i] = -t3[i]*c[i-1,:i]
+                c[i+1,:(i+1)] = c[i+1,:(i+1)]+t2[i]*c[i,:(i+1)]
+                c[i+1,1:(i+2)] = c[i+1,1:(i+2)]+t1[i]*c[i,:(i+1)]
+        return v[:,None]*c
     
     def recur_terms(self, n):
         assert n>=0
@@ -122,15 +126,16 @@ class HermitePolys(AbstractOrthoPolys):
         >>> y.shape
         torch.Size([5, 2, 3])
         
-        >>> torch.allclose(y[0],1+0*x)
+        >>> Cs = torch.exp(p.lnorm(n))
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
         True
-        >>> torch.allclose(y[1],2*x)
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],2*x)
         True
-        >>> torch.allclose(y[2],4*x**2-2)
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],4*x**2-2)
         True
-        >>> torch.allclose(y[3],8*x**3-12*x)
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],8*x**3-12*x)
         True
-        >>> torch.allclose(y[4],16*x**4-48*x**2+12)
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],16*x**4-48*x**2+12)
         True
 
         >>> coeffs = p.coeffs(n)
@@ -217,15 +222,16 @@ class LaguerrePolys(AbstractOrthoPolys):
         >>> y.shape
         torch.Size([5, 2, 3])
         
-        >>> torch.allclose(y[0],1+0*x)
+        >>> Cs = torch.exp(p.lnorm(n)) 
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
         True
-        >>> torch.allclose(y[1],-x+alpha+1)
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],-x+alpha+1)
         True
-        >>> torch.allclose(y[2],1/2*(x**2-2*(alpha+2)*x+(alpha+1)*(alpha+2)))
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],1/2*(x**2-2*(alpha+2)*x+(alpha+1)*(alpha+2)))
         True
-        >>> torch.allclose(y[3],1/6*(-x**3+3*(alpha+3)*x**2-3*(alpha+2)*(alpha+3)*x+(alpha+1)*(alpha+2)*(alpha+3)))
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],1/6*(-x**3+3*(alpha+3)*x**2-3*(alpha+2)*(alpha+3)*x+(alpha+1)*(alpha+2)*(alpha+3)))
         True
-        >>> torch.allclose(y[4],1/24*(x**4-4*(alpha+4)*x**3+6*(alpha+3)*(alpha+4)*x**2-4*(alpha+2)*(alpha+3)*(alpha+4)*x+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)))
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],1/24*(x**4-4*(alpha+4)*x**3+6*(alpha+3)*(alpha+4)*x**2-4*(alpha+2)*(alpha+3)*(alpha+4)*x+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)))
         True
 
         >>> coeffs = p.coeffs(n)
@@ -324,11 +330,12 @@ class JacobiPolys(AbstractOrthoPolys):
         >>> y.shape
         torch.Size([5, 2, 3])
         
-        >>> torch.allclose(y[0],1+0*x)
+        >>> Cs = torch.exp(p.lnorm(n))
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*x)
         True
-        >>> torch.allclose(y[1],(alpha+1)+(alpha+beta+2)*(x-1)/2)
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],(alpha+1)+(alpha+beta+2)*(x-1)/2)
         True
-        >>> torch.allclose(y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(x-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((x-1)/2)**2)
+        >>> torch.allclose(p.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(x-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((x-1)/2)**2)
         True
 
         >>> coeffs = p.coeffs(n)
