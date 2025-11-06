@@ -114,7 +114,43 @@ class AbstractOrthoPolys(object):
         nrange = torch.arange(n+1)
         y = self._lnorm_(nrange)
         return y
+    
+    def _lam_tilde(self, n):
+        nrange = torch.arange(n+1) 
+        return nrange*self._tau_tilde_1+nrange*(nrange-1)*self._sigma_tilde_2
+    
+    def lam(self, n):
+        return self.scale**2*self._lam_tilde(n) 
 
+    def _sigma_tilde(self, xt):
+        return self._sigma_tilde_0+self._sigma_tilde_1*xt+self._sigma_tilde_2*xt**2
+    
+    def sigma(self, x):
+        return self._sigma_tilde(self.scale*x+self.shift)
+    
+    def _tau_tilde(self, xt):
+        return self._tau_tilde_0+self._tau_tilde_1*xt
+    
+    def tau(self, x):
+        return self._tau_tilde(self.scale*x+self.shift)
+    
+    def integral(self, n, x):
+        r"""
+        Integral of the polynomials times the weight function from `self.a` to `x`
+        
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+        
+        Returns:
+            y (torch.Tensor): integral values `[n+1]+list(x.shape)`.
+        """
+        assert n>=0
+        lam = self.lam(n=n)
+        sigma = self.sigma(x=x) 
+        dphi = self.deriv(n=n,x=x)
+        w = torch.exp(self.lweight(x))
+        y = torch.einsum("i,i...->i...",1/lam,sigma*dphi*w)
+        return y
 
 class Hermite(AbstractOrthoPolys):
 
@@ -197,6 +233,11 @@ class Hermite(AbstractOrthoPolys):
         self.atilde = float(-np.inf) 
         self.btilde = float(np.inf) 
         self.distrib = torch.distributions.Normal(loc=loc,scale=scale)
+        self._sigma_tilde_0 = 1
+        self._sigma_tilde_1 = 0 
+        self._sigma_tilde_2 = 0
+        self._tau_tilde_0 = 0 
+        self._tau_tilde_1 = -2
         super().__init__(scale_tilde=np.sqrt(2)*scale,shift_tilde=loc)
     
     def _lnorm_(self, nrange):
@@ -316,6 +357,11 @@ class Laguerre(AbstractOrthoPolys):
         self.atilde = float(0) 
         self.btilde = float(np.inf)
         self.distrib = torch.distributions.Gamma(concentration=self.alpha+1,rate=1)
+        self._sigma_tilde_0 = 0
+        self._sigma_tilde_1 = 1 
+        self._sigma_tilde_2 = 0
+        self._tau_tilde_0 = self.alpha+1 
+        self._tau_tilde_1 = -1
         super().__init__(scale_tilde=scale,shift_tilde=loc)
     
     def _lnorm_(self, nrange):
@@ -441,6 +487,11 @@ class Jacobi(AbstractOrthoPolys):
         self.atilde = float(-1) 
         self.btilde = float(1) 
         self.distrib = torch.distributions.Beta(self.beta+1,self.alpha+1)
+        self._sigma_tilde_0 = 1
+        self._sigma_tilde_1 = 0 
+        self._sigma_tilde_2 = -1
+        self._tau_tilde_0 = self.beta-self.alpha
+        self._tau_tilde_1 = -(self.alpha+self.beta+2)
         super().__init__(scale_tilde=scale/2,shift_tilde=scale/2+loc)
     
     def _lnorm_(self, nrange):
