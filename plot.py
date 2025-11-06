@@ -9,7 +9,7 @@ def plot():
         "Laguerre(loc=1,scale=2)": (top.Laguerre(loc=1,scale=2), 1, 20),
         "Laguerre(alpha=np.pi,loc=1,scale=2)": (top.Laguerre(alpha=np.pi,loc=1,scale=2), 1, 20),
         "Jacobi(alpha=-1/np.sqrt(2),beta=-1/np.sqrt(3),\nloc=2,scale=6)": (top.Jacobi(alpha=-1/np.sqrt(2),beta=-1/np.sqrt(3),loc=2,scale=6), 2, 8),
-        "Jacobi(alpha=-1/2,beta=np.exp(-1),\nloc=2,scale=6)$": (top.Jacobi(alpha=-1/2,beta=np.exp(-1),loc=2,scale=6), 2, 8),
+        "Jacobi(alpha=-1/2,beta=np.exp(-1),\nloc=2,scale=6)": (top.Jacobi(alpha=-1/2,beta=np.exp(-1),loc=2,scale=6), 2, 8),
         "Gegenbauer(alpha=-1/np.pi,loc=2,scale=6)": (top.Gegenbauer(alpha=-1/np.pi,loc=2,scale=6), 2, 8),
         "Chebyshev1(loc=2,scale=6)": (top.Chebyshev1(loc=2,scale=6), 2, 8),
         "Chebyshev2(loc=2,scale=6)": (top.Chebyshev2(loc=2,scale=6), 2, 8),

@@ -85,6 +85,19 @@ class AbstractOrthoPolys(object):
         y = self._recur_terms_(nrange)
         return y
     
+    def deriv(self, n, x):
+        r"""
+        Evaluate first derivative of polynomials. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+            x (torch.Tensor): nodes at which to evaluate.
+
+        Returns: 
+            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
+        """
+        raise Exception("deriv not implemented by child class")
+    
     def lweight(self, x):
         r"""
         Log of the weight function. 
@@ -269,16 +282,6 @@ class Hermite(AbstractOrthoPolys):
         return t1,t2,t3
     
     def deriv(self, n, x):
-        r"""
-        Evaluate first derivative of polynomials. 
-
-        Args:
-            n (int): non-negative maximum degree of the polynomial.
-            x (torch.Tensor): nodes at which to evaluate.
-
-        Returns: 
-            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
-        """
         y = self._eval_unnormalized(n,x)
         lC = self._lnorm(n)
         v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
@@ -409,16 +412,6 @@ class Laguerre(AbstractOrthoPolys):
         return t1,t2,t3
     
     def deriv(self, n, x):
-        r"""
-        Evaluate first derivative of polynomials. 
-
-        Args:
-            n (int): non-negative maximum degree of the polynomial.
-            x (torch.Tensor): nodes at which to evaluate.
-
-        Returns: 
-            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
-        """
         self.alpha += 1
         self.c10 += 1
         y = self._eval_unnormalized(n=n,x=x)
@@ -562,16 +555,6 @@ class Jacobi(AbstractOrthoPolys):
         return t1num/t1denom,t2num/t2denom,t3num/t3denom
 
     def deriv(self, n, x):
-        r"""
-        Evaluate first derivative of polynomials. 
-
-        Args:
-            n (int): non-negative maximum degree of the polynomial.
-            x (torch.Tensor): nodes at which to evaluate.
-
-        Returns: 
-            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
-        """
         self.alpha += 1 
         self.beta += 1
         self.c11 += 1
