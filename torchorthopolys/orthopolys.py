@@ -150,6 +150,7 @@ class AbstractOrthoPolys(object):
         dphi = self.deriv(n=n,x=x)
         w = torch.exp(self.lweight(x))
         y = torch.einsum("i,i...->i...",1/lam,sigma*dphi*w)
+        y[0] = self._cdf(x)
         return y
 
 class Hermite(AbstractOrthoPolys):
@@ -219,6 +220,18 @@ class Hermite(AbstractOrthoPolys):
         >>> yphat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(yphat,yp)
+
+        >>> x = torch.linspace(loc-2*scale,loc+2*scale,6)
+        >>> n = 8
+        >>> v = poly.integral(n,x)
+        >>> v.shape
+        torch.Size([9, 6])
+        >>> vhat = torch.ones_like(v)
+        >>> for i in range(len(x)):
+        ...     ttrap = torch.linspace(loc-5*scale,x[i],100001)
+        ...     ytrap = poly(n=n,x=ttrap)*torch.exp(poly.lweight(ttrap))
+        ...     vhat[:,i] = torch.trapezoid(ytrap,ttrap)
+        >>> assert torch.allclose(vhat,v,atol=1e-3)
     """
 
     def __init__(self, loc=0, scale=1/np.sqrt(2)):
@@ -239,6 +252,9 @@ class Hermite(AbstractOrthoPolys):
         self._tau_tilde_0 = 0 
         self._tau_tilde_1 = -2
         super().__init__(scale_tilde=np.sqrt(2)*scale,shift_tilde=loc)
+    
+    def _cdf(self, x):
+        return self.distrib.cdf(x)
     
     def _lnorm_(self, nrange):
         return np.log(np.sqrt(np.pi))+nrange*np.log(2)+torch.lgamma(nrange+1)
@@ -340,6 +356,18 @@ class Laguerre(AbstractOrthoPolys):
         >>> yphat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(yphat,yp)
+
+        >>> x = torch.linspace(poly.a,10,7)[1:]
+        >>> n = 8
+        >>> v = poly.integral(n,x)
+        >>> v.shape
+        torch.Size([9, 6])
+        >>> vhat = torch.ones_like(v)
+        >>> for i in range(len(x)):
+        ...     ttrap = torch.linspace(poly.a,x[i],100001)[1:]
+        ...     ytrap = poly(n=n,x=ttrap)*torch.exp(poly.lweight(ttrap))
+        ...     vhat[:,i] = torch.trapezoid(ytrap,ttrap)
+        >>> assert torch.allclose(vhat,v,atol=2.5e-2)
     """
 
     def __init__(self, alpha=0, loc=0, scale=1):
@@ -363,6 +391,9 @@ class Laguerre(AbstractOrthoPolys):
         self._tau_tilde_0 = self.alpha+1 
         self._tau_tilde_1 = -1
         super().__init__(scale_tilde=scale,shift_tilde=loc)
+    
+    def _cdf(self, x):
+        return self.distrib.cdf(self.scale*x+self.shift)
     
     def _lnorm_(self, nrange):
         return torch.lgamma(nrange+self.alpha+1)-torch.lgamma(nrange+1) 
@@ -467,6 +498,18 @@ class Jacobi(AbstractOrthoPolys):
         >>> yphat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(yphat,yp)
+
+        >>> x = torch.linspace(poly.a,poly.b,6)
+        >>> n = 8
+        >>> v = poly.integral(n,x)
+        >>> v.shape
+        torch.Size([9, 6])
+        >>> vhat = torch.ones_like(v)
+        >>> for i in range(len(x)):
+        ...     ttrap = torch.linspace(poly.a,x[i],100000)
+        ...     ytrap = poly(n=n,x=ttrap)*torch.exp(poly.lweight(ttrap))
+        ...     vhat[:,i] = torch.trapezoid(ytrap,ttrap)
+        >>> assert torch.allclose(vhat,v,atol=1e-5)
     """
     
     def __init__(self, alpha=0, beta=0, loc=-1, scale=2):
@@ -487,12 +530,16 @@ class Jacobi(AbstractOrthoPolys):
         self.atilde = float(-1) 
         self.btilde = float(1) 
         self.distrib = torch.distributions.Beta(self.beta+1,self.alpha+1)
+        self.distrib_scipy = scipy.stats.beta(a=self.beta+1,b=self.alpha+1,loc=loc,scale=scale)
         self._sigma_tilde_0 = 1
         self._sigma_tilde_1 = 0 
         self._sigma_tilde_2 = -1
         self._tau_tilde_0 = self.beta-self.alpha
         self._tau_tilde_1 = -(self.alpha+self.beta+2)
         super().__init__(scale_tilde=scale/2,shift_tilde=scale/2+loc)
+    
+    def _cdf(self, x):
+        return torch.from_numpy(self.distrib_scipy.cdf(x.numpy()))
     
     def _lnorm_(self, nrange):
         t0 = (1+self.alpha+self.beta)*np.log(2)+scipy.special.gammaln(self.alpha+1)+scipy.special.gammaln(self.beta+1)-scipy.special.gammaln(self.alpha+self.beta+2)+np.log(scipy.special.betainc(1+self.alpha,1+self.beta,1/2)+scipy.special.betainc(1+self.beta,1+self.alpha,1/2))
