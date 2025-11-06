@@ -7,16 +7,17 @@ def lcomb(n, k):
 def comb(n, k):
     """
     Examples:
+        >>> torch.set_default_dtype(torch.float64)
         >>> import scipy.special
         >>> n = torch.arange(5)
         >>> k = torch.arange(4) 
         >>> comb_torch = comb(n[:,None],k[None,:])
         >>> comb_torch
-        tensor([[1., 0., 0., 0.],
-                [1., 1., 0., 0.],
-                [1., 2., 1., 0.],
-                [1., 3., 3., 1.],
-                [1., 4., 6., 4.]])
+        tensor([[1.0000, 0.0000, 0.0000, 0.0000],
+                [1.0000, 1.0000, 0.0000, 0.0000],
+                [1.0000, 2.0000, 1.0000, 0.0000],
+                [1.0000, 3.0000, 3.0000, 1.0000],
+                [1.0000, 4.0000, 6.0000, 4.0000]])
         >>> comb_sp = scipy.special.comb(n[:,None].numpy(),k[None,:].numpy())
         >>> np.allclose(comb_sp,comb_torch.numpy())
         True
