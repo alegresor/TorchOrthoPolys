@@ -146,11 +146,11 @@ class Hermite(AbstractOrthoPolys):
 
         >>> Cs = torch.exp(poly._lnorm(n))
         >>> xt = poly.scale*x+poly.shift
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*xt)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],2*xt)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],4*xt**2-2)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],8*xt**3-12*xt)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],16*xt**4-48*xt**2+12)
+        >>> assert torch.allclose(y[0],torch.sqrt(Cs[0]/Cs[0])/poly.c00*(1+0*xt))
+        >>> assert torch.allclose(y[1],torch.sqrt(Cs[0]/Cs[1])/poly.c00*(2*xt))
+        >>> assert torch.allclose(y[2],torch.sqrt(Cs[0]/Cs[2])/poly.c00*(4*xt**2-2))
+        >>> assert torch.allclose(y[3],torch.sqrt(Cs[0]/Cs[3])/poly.c00*(8*xt**3-12*xt))
+        >>> assert torch.allclose(y[4],torch.sqrt(Cs[0]/Cs[4])/poly.c00*(16*xt**4-48*xt**2+12))
 
         >>> coeffs = poly.coeffs(n)
         >>> coeffs.shape
@@ -232,11 +232,11 @@ class Laguerre(AbstractOrthoPolys):
 
         >>> Cs = torch.exp(poly._lnorm(n))
         >>> xt = poly.scale*x+poly.shift
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*xt)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],-xt+alpha+1)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],1/2*(xt**2-2*(alpha+2)*xt+(alpha+1)*(alpha+2)))
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[3]/Cs[0])*y[3],1/6*(-xt**3+3*(alpha+3)*xt**2-3*(alpha+2)*(alpha+3)*xt+(alpha+1)*(alpha+2)*(alpha+3)))
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[4]/Cs[0])*y[4],1/24*(xt**4-4*(alpha+4)*xt**3+6*(alpha+3)*(alpha+4)*xt**2-4*(alpha+2)*(alpha+3)*(alpha+4)*xt+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4)))
+        >>> assert torch.allclose(y[0],torch.sqrt(Cs[0]/Cs[0])/poly.c00*(1+0*xt))
+        >>> assert torch.allclose(y[1],torch.sqrt(Cs[0]/Cs[1])/poly.c00*(-xt+alpha+1))
+        >>> assert torch.allclose(y[2],torch.sqrt(Cs[0]/Cs[2])/poly.c00*(1/2*(xt**2-2*(alpha+2)*xt+(alpha+1)*(alpha+2))))
+        >>> assert torch.allclose(y[3],torch.sqrt(Cs[0]/Cs[3])/poly.c00*(1/6*(-xt**3+3*(alpha+3)*xt**2-3*(alpha+2)*(alpha+3)*xt+(alpha+1)*(alpha+2)*(alpha+3))))
+        >>> assert torch.allclose(y[4],torch.sqrt(Cs[0]/Cs[4])/poly.c00*(1/24*(xt**4-4*(alpha+4)*xt**3+6*(alpha+3)*(alpha+4)*xt**2-4*(alpha+2)*(alpha+3)*(alpha+4)*xt+(alpha+1)*(alpha+2)*(alpha+3)*(alpha+4))))
 
         >>> coeffs = poly.coeffs(n)
         >>> coeffs.shape
@@ -323,9 +323,9 @@ class Jacobi(AbstractOrthoPolys):
         
         >>> Cs = torch.exp(poly._lnorm(n))
         >>> xt = poly.scale*x+poly.shift
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*xt)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],(alpha+1)+(alpha+beta+2)*(xt-1)/2)
-        >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[2]/Cs[0])*y[2],(alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(xt-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((xt-1)/2)**2)
+        >>> assert torch.allclose(y[0],torch.sqrt(Cs[0]/Cs[0])/poly.c00*(1+0*xt))
+        >>> assert torch.allclose(y[1],torch.sqrt(Cs[0]/Cs[1])/poly.c00*((alpha+1)+(alpha+beta+2)*(xt-1)/2))
+        >>> assert torch.allclose(y[2],torch.sqrt(Cs[0]/Cs[2])/poly.c00*((alpha+1)*(alpha+2)/2+(alpha+2)*(alpha+beta+3)*(xt-1)/2+(alpha+beta+3)*(alpha+beta+4)/2*((xt-1)/2)**2))
 
         >>> coeffs = poly.coeffs(n)
         >>> coeffs.shape
