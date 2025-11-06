@@ -33,12 +33,16 @@ class AbstractOrthoPolys(object):
         Returns: 
             y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
         """
+        y = self._eval_unnormalized(n,x)
+        lC = self._lnorm(n)
+        v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
+        return torch.einsum("i,i...->i...",v,y)
+    
+    def _eval_unnormalized(self, n, x):
         assert n>=0
         assert (x>=self.a).all()
         assert (x<=self.b).all()
         xt = self.scale*x+self.shift
-        lC = self._lnorm(n)
-        v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
         y = torch.empty([n+1]+list(xt.shape))
         y[0] = self.c00
         if n>0:
@@ -47,7 +51,7 @@ class AbstractOrthoPolys(object):
             t1,t2,t3 = self._recur_terms(n)
             for i in range(1,n):
                 y[i+1] = (t1[i]*xt+t2[i])*y[i]-t3[i]*y[i-1]
-        return torch.einsum("i,i...->i...",v,y)
+        return y
     
     def coeffs(self, n):
         r"""
@@ -168,6 +172,17 @@ class Hermite(AbstractOrthoPolys):
         >>> yhat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(y,yhat)
+
+        >>> yp = poly.deriv(n,x) 
+        >>> yp.shape
+        torch.Size([5, 65536])
+        >>> xtpowsm1 = xt[...,None]**torch.arange(-1,n)
+        >>> xtpowsm1.shape
+        torch.Size([65536, 5])
+        >>> yphat = poly.scale*torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xtpowsm1) # generally unstable
+        >>> yphat.shape
+        torch.Size([5, 65536])
+        >>> assert torch.allclose(yphat,yp)
     """
 
     def __init__(self, loc=0, scale=1/np.sqrt(2)):
@@ -195,6 +210,25 @@ class Hermite(AbstractOrthoPolys):
         t2 = 0*nrange
         t3 = 2*nrange
         return t1,t2,t3
+    
+    def deriv(self, n, x):
+        r"""
+        Evaluate first derivative of polynomials. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+            x (torch.Tensor): nodes at which to evaluate.
+
+        Returns: 
+            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
+        """
+        y = self._eval_unnormalized(n,x)
+        lC = self._lnorm(n)
+        v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
+        nrange = torch.arange(1,n+1)
+        yp = torch.zeros_like(y)
+        yp[1:] = torch.einsum("i,i...->i...",2*torch.exp(torch.lgamma(nrange+1)-torch.lgamma(nrange)+self.logscale)*v[1:],y[:-1])
+        return yp
     
 
 class Laguerre(AbstractOrthoPolys):
@@ -254,6 +288,17 @@ class Laguerre(AbstractOrthoPolys):
         >>> yhat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(y,yhat)
+
+        >>> yp = poly.deriv(n,x) 
+        >>> yp.shape
+        torch.Size([5, 65536])
+        >>> xtpowsm1 = xt[...,None]**torch.arange(-1,n)
+        >>> xtpowsm1.shape
+        torch.Size([65536, 5])
+        >>> yphat = poly.scale*torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xtpowsm1) # generally unstable
+        >>> yphat.shape
+        torch.Size([5, 65536])
+        >>> assert torch.allclose(yphat,yp)
     """
 
     def __init__(self, alpha=0, loc=0, scale=1):
@@ -285,6 +330,28 @@ class Laguerre(AbstractOrthoPolys):
         t2 = (2*nrange+1+self.alpha)/(nrange+1)
         t3 = (nrange+self.alpha)/(nrange+1)
         return t1,t2,t3
+    
+    def deriv(self, n, x):
+        r"""
+        Evaluate first derivative of polynomials. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+            x (torch.Tensor): nodes at which to evaluate.
+
+        Returns: 
+            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
+        """
+        self.alpha += 1
+        self.c10 += 1
+        y = self._eval_unnormalized(n=n,x=x)
+        self.alpha -= 1
+        self.c10 -= 1
+        lC = self._lnorm(n)
+        v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
+        yp = torch.zeros_like(y)
+        yp[1:] = -torch.einsum("i,i...->i...",self.scale*v[1:],y[:-1])
+        return yp
 
 
 class Jacobi(AbstractOrthoPolys):
@@ -343,6 +410,17 @@ class Jacobi(AbstractOrthoPolys):
         >>> yhat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(y,yhat)
+        
+        >>> yp = poly.deriv(n,x) 
+        >>> yp.shape
+        torch.Size([5, 65536])
+        >>> xtpowsm1 = xt[...,None]**torch.arange(-1,n)
+        >>> xtpowsm1.shape
+        torch.Size([65536, 5])
+        >>> yphat = poly.scale*torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xtpowsm1) # generally unstable
+        >>> yphat.shape
+        torch.Size([5, 65536])
+        >>> assert torch.allclose(yphat,yp)
     """
     
     def __init__(self, alpha=0, beta=0, loc=-1, scale=2):
@@ -384,6 +462,32 @@ class Jacobi(AbstractOrthoPolys):
         t3num = (nrange+self.alpha)*(nrange+self.beta)*(2*nrange+2+self.alpha+self.beta)
         t3denom = (nrange+1)*(nrange+1+self.alpha+self.beta)*(2*nrange+self.alpha+self.beta)
         return t1num/t1denom,t2num/t2denom,t3num/t3denom
+
+    def deriv(self, n, x):
+        r"""
+        Evaluate first derivative of polynomials. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+            x (torch.Tensor): nodes at which to evaluate.
+
+        Returns: 
+            y (torch.Tensor): polynomial evaluations with shape `[n+1]+list(x.shape)`.
+        """
+        self.alpha += 1 
+        self.beta += 1
+        self.c11 += 1
+        y = self._eval_unnormalized(n,x)
+        self.alpha -= 1 
+        self.beta -= 1
+        self.c11 -= 1
+        lC = self._lnorm(n)
+        v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
+        nrange = torch.arange(1,n+1)
+        yp = torch.zeros_like(y)
+        yp[1:] = torch.einsum("i,i...->i...",torch.exp(torch.lgamma(self.alpha+self.beta+nrange+2)-torch.lgamma(self.alpha+self.beta+nrange+1)+self.logscale)/2*v[1:],y[:-1])
+        return yp
+
 
 class Gegenbauer(Jacobi):
     
