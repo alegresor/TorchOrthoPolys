@@ -5,15 +5,15 @@ def plot():
 
     n = 6
     polydict = {
-        r"Hermite": (top.Hermite(), -1, 1),
-        r"Laguerre": (top.Laguerre(), 0, 10),
-        r"Laguerre, $\alpha=\pi$": (top.Laguerre(alpha=np.pi), 0, 10),
-        r"Jacobi, $\alpha=-1/\sqrt{2}$, $\beta=-1/\sqrt{3}$": (top.Jacobi(alpha=-1/np.sqrt(2),beta=-1/np.sqrt(3)), -1, 1),
-        r"Jacobi, $\alpha=-1/2$, $\beta=e^{-1}$": (top.Jacobi(alpha=-1/2,beta=np.exp(-1)), -1, 1),
-        r"Gegenbauer, $\alpha=-1/\pi$": (top.Gegenbauer(alpha=-1/np.pi), -1, 1),
-        r"Chebyshev $1^\mathrm{st}$ kind": (top.Chebyshev1(), -1, 1),
-        r"Chebyshev $2^\mathrm{nd}$ kind": (top.Chebyshev2(), -1, 1),
-        r"Legendre": (top.Legendre(), -1, 1),
+        "Hermite(loc=2,scale=3)": (top.Hermite(loc=2,scale=3), -4, 8),
+        "Laguerre(loc=1,scale=2)": (top.Laguerre(loc=1,scale=2), 1, 20),
+        "Laguerre(alpha=np.pi,loc=1,scale=2)": (top.Laguerre(alpha=np.pi,loc=1,scale=2), 1, 20),
+        "Jacobi(alpha=-1/np.sqrt(2),beta=-1/np.sqrt(3),\nloc=2,scale=6)": (top.Jacobi(alpha=-1/np.sqrt(2),beta=-1/np.sqrt(3),loc=2,scale=6), 2, 8),
+        "Jacobi(alpha=-1/2,beta=np.exp(-1),\nloc=2,scale=6)$": (top.Jacobi(alpha=-1/2,beta=np.exp(-1),loc=2,scale=6), 2, 8),
+        "Gegenbauer(alpha=-1/np.pi,loc=2,scale=6)": (top.Gegenbauer(alpha=-1/np.pi,loc=2,scale=6), 2, 8),
+        "Chebyshev1(loc=2,scale=6)": (top.Chebyshev1(loc=2,scale=6), 2, 8),
+        "Chebyshev2(loc=2,scale=6)": (top.Chebyshev2(loc=2,scale=6), 2, 8),
+        "Legendre(loc=2,scale=6)": (top.Legendre(loc=2,scale=6), 2, 8),
     }
 
     for name,(poly,a,b) in polydict.items():
@@ -27,6 +27,7 @@ def plot():
     ncols = 3 
     nrows = int(np.ceil(len(polydict)/ncols))
     fig,ax = pyplot.subplots(nrows=nrows,ncols=ncols,figsize=(PW,PW/ncols*nrows))
+    ax = np.atleast_2d(ax).reshape((nrows,ncols))
     for l,(name,(poly,a,b,x,y)) in enumerate(polydict.items()):
         i = l//ncols
         j = l%ncols

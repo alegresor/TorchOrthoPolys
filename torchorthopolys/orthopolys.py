@@ -18,8 +18,8 @@ class AbstractOrthoPolys(object):
         self.b = self.btilde*self.scale_tilde+self.shift_tilde
         self.scale = 1/self.scale_tilde
         self.shift = -self.shift_tilde/self.scale_tilde
-        assert self.atilde==(self.a*self.scale+self.shift)
-        assert self.btilde==(self.b*self.scale+self.shift)
+        assert np.allclose(self.atilde,self.a*self.scale+self.shift)
+        assert np.allclose(self.btilde,self.b*self.scale+self.shift)
         self.logscale = np.log(self.scale)
 
     def __call__(self, n, x):
