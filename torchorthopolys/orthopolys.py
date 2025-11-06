@@ -8,7 +8,7 @@ class AbstractOrthoPolys(object):
     """
 
     def __init__(self, scale_tilde=1, shift_tilde=0):
-        self.factor_lweight = float(2*np.log(self.c00)-float(self.lnorm(0)))
+        self.factor_lweight = float(2*np.log(self.c00)-float(self._lnorm(0)))
         assert np.isfinite(scale_tilde)
         assert np.isfinite(shift_tilde)
         assert scale_tilde>0
@@ -37,14 +37,14 @@ class AbstractOrthoPolys(object):
         assert (x>=self.a).all()
         assert (x<=self.b).all()
         xt = self.scale*x+self.shift
-        lC = self.lnorm(n)
+        lC = self._lnorm(n)
         v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
         y = torch.empty([n+1]+list(xt.shape))
         y[0] = self.c00
         if n>0:
             y[1] = self.c11*xt+self.c10
         if n>1: 
-            t1,t2,t3 = self.recur_terms(n)
+            t1,t2,t3 = self._recur_terms(n)
             for i in range(1,n):
                 y[i+1] = (t1[i]*xt+t2[i])*y[i]-t3[i]*y[i-1]
         return torch.einsum("i,i...->i...",v,y)
@@ -60,7 +60,7 @@ class AbstractOrthoPolys(object):
             c (torch.Tensor): coefficients with shape `[n+1,n+1]`.
         """
         assert n>=0 
-        lC = self.lnorm(n)
+        lC = self._lnorm(n)
         v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
         c = torch.zeros((n+1,n+1))
         c[0,0] = self.c00
@@ -68,17 +68,17 @@ class AbstractOrthoPolys(object):
             c[1,0] = self.c10
             c[1,1] = self.c11
         if n>1:
-            t1,t2,t3 = self.recur_terms(n)
+            t1,t2,t3 = self._recur_terms(n)
             for i in range(1,n):
                 c[i+1,:i] = -t3[i]*c[i-1,:i]
                 c[i+1,:(i+1)] = c[i+1,:(i+1)]+t2[i]*c[i,:(i+1)]
                 c[i+1,1:(i+2)] = c[i+1,1:(i+2)]+t1[i]*c[i,:(i+1)]
         return v[:,None]*c
     
-    def recur_terms(self, n):
+    def _recur_terms(self, n):
         assert n>=0
         nrange = torch.arange(n+1)
-        y = self._recur_terms(nrange)
+        y = self._recur_terms_(nrange)
         return y
     
     def lweight(self, x):
@@ -96,7 +96,7 @@ class AbstractOrthoPolys(object):
         y = self.logscale+self._lweight(x)
         return y
     
-    def lnorm(self, n):
+    def _lnorm(self, n):
         r"""
         Log of the normalization constants. 
 
@@ -108,7 +108,7 @@ class AbstractOrthoPolys(object):
         """
         assert n>=0
         nrange = torch.arange(n+1)
-        y = self._lnorm(nrange)
+        y = self._lnorm_(nrange)
         return y
 
 
@@ -144,7 +144,7 @@ class Hermite(AbstractOrthoPolys):
         >>> lrhohat = torch.from_numpy(scipy.stats.norm.logpdf(x.numpy(),loc=loc,scale=scale))
         >>> assert torch.allclose(lrho,lrhohat)
 
-        >>> Cs = torch.exp(poly.lnorm(n))
+        >>> Cs = torch.exp(poly._lnorm(n))
         >>> xt = poly.scale*x+poly.shift
         >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*xt)
         >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],2*xt)
@@ -184,13 +184,13 @@ class Hermite(AbstractOrthoPolys):
         self.distrib = torch.distributions.Normal(loc=loc,scale=scale)
         super().__init__(scale_tilde=np.sqrt(2)*scale,shift_tilde=loc)
     
-    def _lnorm(self, nrange):
+    def _lnorm_(self, nrange):
         return np.log(np.sqrt(np.pi))+nrange*np.log(2)+torch.lgamma(nrange+1)
     
     def _lweight(self, x):
         return self.distrib.log_prob(x)-self.logscale
     
-    def _recur_terms(self, nrange):
+    def _recur_terms_(self, nrange):
         t1 = 2+0*nrange
         t2 = 0*nrange
         t3 = 2*nrange
@@ -230,7 +230,7 @@ class Laguerre(AbstractOrthoPolys):
         >>> lrhohat = torch.from_numpy(scipy.stats.gamma.logpdf(x.numpy(),a=alpha+1,loc=loc,scale=scale))
         >>> assert torch.allclose(lrho,lrhohat,atol=1e-3)
 
-        >>> Cs = torch.exp(poly.lnorm(n))
+        >>> Cs = torch.exp(poly._lnorm(n))
         >>> xt = poly.scale*x+poly.shift
         >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*xt)
         >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],-xt+alpha+1)
@@ -273,14 +273,14 @@ class Laguerre(AbstractOrthoPolys):
         self.distrib = torch.distributions.Gamma(concentration=self.alpha+1,rate=1)
         super().__init__(scale_tilde=scale,shift_tilde=loc)
     
-    def _lnorm(self, nrange):
+    def _lnorm_(self, nrange):
         return torch.lgamma(nrange+self.alpha+1)-torch.lgamma(nrange+1) 
     
     def _lweight(self, x):
         xt = self.scale*x+self.shift
         return self.distrib.log_prob(xt)
     
-    def _recur_terms(self, nrange):
+    def _recur_terms_(self, nrange):
         t1 = -1/(nrange+1)
         t2 = (2*nrange+1+self.alpha)/(nrange+1)
         t3 = (nrange+self.alpha)/(nrange+1)
@@ -321,7 +321,7 @@ class Jacobi(AbstractOrthoPolys):
         >>> lrhohat = torch.from_numpy(scipy.stats.beta.logpdf(x.numpy(),a=beta+1,b=alpha+1,loc=loc,scale=scale))
         >>> assert torch.allclose(lrho,lrhohat,1e-3)
         
-        >>> Cs = torch.exp(poly.lnorm(n))
+        >>> Cs = torch.exp(poly._lnorm(n))
         >>> xt = poly.scale*x+poly.shift
         >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[0]/Cs[0])*y[0],1+0*xt)
         >>> assert torch.allclose(poly.c00*torch.sqrt(Cs[1]/Cs[0])*y[1],(alpha+1)+(alpha+beta+2)*(xt-1)/2)
@@ -365,7 +365,7 @@ class Jacobi(AbstractOrthoPolys):
         self.distrib = torch.distributions.Beta(self.beta+1,self.alpha+1)
         super().__init__(scale_tilde=scale/2,shift_tilde=scale/2+loc)
     
-    def _lnorm(self, nrange):
+    def _lnorm_(self, nrange):
         t0 = (1+self.alpha+self.beta)*np.log(2)+scipy.special.gammaln(self.alpha+1)+scipy.special.gammaln(self.beta+1)-scipy.special.gammaln(self.alpha+self.beta+2)+np.log(scipy.special.betainc(1+self.alpha,1+self.beta,1/2)+scipy.special.betainc(1+self.beta,1+self.alpha,1/2))
         lognum = (self.alpha+self.beta+1)*np.log(2) + torch.lgamma(nrange[1:]+self.alpha+1)+torch.lgamma(nrange[1:]+self.beta+1)
         logdenom = torch.log(2*nrange[1:]+self.alpha+self.beta+1) + torch.lgamma(nrange[1:]+1) + torch.lgamma(nrange[1:]+self.alpha+self.beta+1)
@@ -376,7 +376,7 @@ class Jacobi(AbstractOrthoPolys):
         xt = self.scale*x+self.shift
         return self.distrib.log_prob((xt+1)/2)-np.log(2)
     
-    def _recur_terms(self, nrange):
+    def _recur_terms_(self, nrange):
         t1num = (2*nrange+1+self.alpha+self.beta)*(2*nrange+2+self.alpha+self.beta)
         t1denom = 2*(nrange+1)*(nrange+1+self.alpha+self.beta)
         t2num = (self.alpha**2-self.beta**2)*(2*nrange+1+self.alpha+self.beta)
