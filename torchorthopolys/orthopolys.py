@@ -123,6 +123,18 @@ class AbstractOrthoPolys(object):
         y = self.logscale+self._lweight(x)
         return y
     
+    def weight(self, x):
+        r"""
+        The weight function. 
+
+        Args:
+            x (torch.Tensor): nodes at which to evaluate.
+
+        Returns: 
+            y (torch.Tensor): weight evaluations with the same shape as `x`.
+        """
+        return torch.exp(self.lweight(x))
+    
     def _lnorm(self, n):
         r"""
         Log of the normalization constants. 
@@ -171,7 +183,7 @@ class AbstractOrthoPolys(object):
         lam = self.lam(n=n)
         sigma = self.sigma(x=x) 
         dphi = self.deriv(n=n,x=x)
-        w = torch.exp(self.lweight(x))
+        w = self.weight(x)
         y = torch.einsum("i,i...->i...",1/lam,sigma*dphi*w)
         y[0] = self._cdf(x)
         return y
@@ -252,7 +264,7 @@ class Hermite(AbstractOrthoPolys):
         >>> vhat = torch.ones_like(v)
         >>> for i in range(len(x)):
         ...     ttrap = torch.linspace(loc-5*scale,x[i],100001)
-        ...     ytrap = poly(n=n,x=ttrap)*torch.exp(poly.lweight(ttrap))
+        ...     ytrap = poly(n=n,x=ttrap)*poly.weight(ttrap)
         ...     vhat[:,i] = torch.trapezoid(ytrap,ttrap)
         >>> assert torch.allclose(vhat,v,atol=1e-3)
     """
@@ -378,7 +390,7 @@ class Laguerre(AbstractOrthoPolys):
         >>> vhat = torch.ones_like(v)
         >>> for i in range(len(x)):
         ...     ttrap = torch.linspace(poly.a,x[i],100001)[1:]
-        ...     ytrap = poly(n=n,x=ttrap)*torch.exp(poly.lweight(ttrap))
+        ...     ytrap = poly(n=n,x=ttrap)*poly.weight(ttrap)
         ...     vhat[:,i] = torch.trapezoid(ytrap,ttrap)
         >>> assert torch.allclose(vhat,v,atol=2.5e-2)
     """
@@ -510,7 +522,7 @@ class Jacobi(AbstractOrthoPolys):
         >>> vhat = torch.ones_like(v)
         >>> for i in range(len(x)):
         ...     ttrap = torch.linspace(poly.a,x[i],100000)
-        ...     ytrap = poly(n=n,x=ttrap)*torch.exp(poly.lweight(ttrap))
+        ...     ytrap = poly(n=n,x=ttrap)*poly.weight(ttrap)
         ...     vhat[:,i] = torch.trapezoid(ytrap,ttrap)
         >>> assert torch.allclose(vhat,v,atol=1e-5)
     """
