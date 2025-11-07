@@ -86,10 +86,9 @@ class AbstractOrthoPolys(object):
         Apows = self.scale**nrange
         Cnew = torch.zeros_like(C)
         S = comb(nrange[:,None],nrange[None,:])
-        for i in range(n+1):
-            for j in range(n+1):
-                Bpows = self.shift**torch.maximum(torch.arange(j,j-n-1,-1),torch.zeros(1))
-                Cnew[i,:] += C[i,j]*S[j,:]*Apows*Bpows
+        for j in range(n+1):
+            Bpows = self.shift**torch.maximum(torch.arange(j,j-n-1,-1),torch.zeros(1))
+            Cnew += C[:,[j]]*S[[j],:]*Apows*Bpows
         return Cnew
     
     def _recur_terms(self, n):
