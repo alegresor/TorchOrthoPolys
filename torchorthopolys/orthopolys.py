@@ -84,12 +84,10 @@ class AbstractOrthoPolys(object):
         C = self._coeffs_unnormalized(n)
         nrange = torch.arange(n+1)
         Apows = self.scale**nrange
-        Cnew = torch.zeros_like(C)
         S = comb(nrange[:,None],nrange[None,:])
         Bpows = self.shift**torch.maximum(nrange[:,None]-nrange[None,:],torch.zeros(1))
-        for j in range(n+1):
-            Cnew += C[:,[j]]*S[[j],:]*Bpows[j]
-        return Cnew*Apows
+        Cnew = torch.einsum("ij,jk,jk,k->ik",C,S,Bpows,Apows)
+        return Cnew
     
     def _recur_terms(self, n):
         assert n>=0
