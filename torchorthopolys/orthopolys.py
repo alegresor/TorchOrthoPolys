@@ -1,6 +1,7 @@
 import torch 
 import numpy as np 
 import scipy.special
+from .util import comb 
 
 class AbstractOrthoPolys(object):
     r"""
@@ -53,16 +54,7 @@ class AbstractOrthoPolys(object):
                 y[i+1] = (t1[i]*xt+t2[i])*y[i]-t3[i]*y[i-1]
         return y
     
-    def coeffs(self, n):
-        r"""
-        Evaluate coefficients. 
-
-        Args:
-            n (int): non-negative maximum degree of the polynomial.
-
-        Returns: 
-            c (torch.Tensor): coefficients with shape `[n+1,n+1]`.
-        """
+    def _coeffs_unnormalized(self, n):
         assert n>=0 
         lC = self._lnorm(n)
         v = torch.exp(lC[0]/2-lC/2-np.log(self.c00))
@@ -78,6 +70,27 @@ class AbstractOrthoPolys(object):
                 c[i+1,:(i+1)] = c[i+1,:(i+1)]+t2[i]*c[i,:(i+1)]
                 c[i+1,1:(i+2)] = c[i+1,1:(i+2)]+t1[i]*c[i,:(i+1)]
         return v[:,None]*c
+    
+    def coeffs(self, n):
+        r"""
+        Evaluate coefficients. 
+
+        Args:
+            n (int): non-negative maximum degree of the polynomial.
+
+        Returns: 
+            c (torch.Tensor): coefficients with shape `[n+1,n+1]`.
+        """
+        C = self._coeffs_unnormalized(n)
+        nrange = torch.arange(n+1)
+        Apows = self.scale**nrange
+        Cnew = torch.zeros_like(C)
+        S = comb(nrange[:,None],nrange[None,:])
+        for i in range(n+1):
+            for j in range(n+1):
+                Bpows = self.shift**torch.maximum(torch.arange(j,j-n-1,-1),torch.zeros(1))
+                Cnew[i,:] += C[i,j]*S[j,:]*Apows*Bpows
+        return Cnew
     
     def _recur_terms(self, n):
         assert n>=0
@@ -211,14 +224,14 @@ class Hermite(AbstractOrthoPolys):
         torch.Size([5, 5])
         >>> coeffs
         tensor([[ 1.0000,  0.0000,  0.0000,  0.0000,  0.0000],
-                [ 0.0000,  1.4142,  0.0000,  0.0000,  0.0000],
-                [-0.7071,  0.0000,  1.4142,  0.0000,  0.0000],
-                [-0.0000, -1.7321,  0.0000,  1.1547,  0.0000],
-                [ 0.6124, -0.0000, -2.4495,  0.0000,  0.8165]])
-        >>> xtpows = xt[...,None]**torch.arange(n+1)
-        >>> xtpows.shape
+                [ 1.1557,  0.3679,  0.0000,  0.0000,  0.0000],
+                [ 0.2374,  0.6013,  0.0957,  0.0000,  0.0000],
+                [-0.7853,  0.1513,  0.1916,  0.0203,  0.0000],
+                [-0.6593, -0.5778,  0.0556,  0.0470,  0.0037]])
+        >>> xpows = x[...,None]**torch.arange(n+1)
+        >>> xpows.shape
         torch.Size([65536, 5])
-        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xtpows) # generally unstable
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
         >>> yhat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(y,yhat)
@@ -226,10 +239,10 @@ class Hermite(AbstractOrthoPolys):
         >>> yp = poly.deriv(n,x) 
         >>> yp.shape
         torch.Size([5, 65536])
-        >>> xtpowsm1 = xt[...,None]**torch.arange(-1,n)
-        >>> xtpowsm1.shape
+        >>> xpowsm1 = x[...,None]**torch.arange(-1,n)
+        >>> xpowsm1.shape
         torch.Size([65536, 5])
-        >>> yphat = poly.scale*torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xtpowsm1) # generally unstable
+        >>> yphat = torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xpowsm1) # generally unstable
         >>> yphat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(yphat,yp)
@@ -337,14 +350,14 @@ class Laguerre(AbstractOrthoPolys):
         torch.Size([5, 5])
         >>> coeffs
         tensor([[ 1.0000,  0.0000,  0.0000,  0.0000,  0.0000],
-                [ 0.6501, -1.5382,  0.0000,  0.0000,  0.0000],
-                [ 0.5483, -2.5946,  0.9119,  0.0000,  0.0000],
-                [ 0.4927, -3.4974,  2.4584, -0.3383,  0.0000],
-                [ 0.4558, -4.3136,  4.5481, -1.2516,  0.0914]])
-        >>> xtpows = xt[...,None]**torch.arange(n+1)
-        >>> xtpows.shape
+                [-1.1276, -0.5659,  0.0000,  0.0000,  0.0000],
+                [-1.2323, -0.1791,  0.1234,  0.0000,  0.0000],
+                [-0.7878,  0.3052,  0.1740, -0.0168,  0.0000],
+                [-0.2235,  0.6433,  0.1274, -0.0413,  0.0017]])
+        >>> xpows = x[...,None]**torch.arange(n+1)
+        >>> xpows.shape
         torch.Size([65536, 5])
-        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xtpows) # generally unstable
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
         >>> yhat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(y,yhat)
@@ -352,10 +365,10 @@ class Laguerre(AbstractOrthoPolys):
         >>> yp = poly.deriv(n,x) 
         >>> yp.shape
         torch.Size([5, 65536])
-        >>> xtpowsm1 = xt[...,None]**torch.arange(-1,n)
-        >>> xtpowsm1.shape
+        >>> xpowsm1 = x[...,None]**torch.arange(-1,n)
+        >>> xpowsm1.shape
         torch.Size([65536, 5])
-        >>> yphat = poly.scale*torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xtpowsm1) # generally unstable
+        >>> yphat = torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xpowsm1) # generally unstable
         >>> yphat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(yphat,yp)
@@ -468,15 +481,15 @@ class Jacobi(AbstractOrthoPolys):
         >>> coeffs.shape
         torch.Size([5, 5])
         >>> coeffs
-        tensor([[  1.0000,   0.0000,   0.0000,   0.0000,   0.0000],
-                [ -0.1591,   2.0677,   0.0000,   0.0000,   0.0000],
-                [ -0.9729,  -0.3985,   4.1846,   0.0000,   0.0000],
-                [  0.1742,  -4.0069,  -0.8711,   8.4202,   0.0000],
-                [  0.9690,   0.7848, -12.2100,  -1.8273,  16.9029]])
-        >>> xtpows = xt[...,None]**torch.arange(n+1)
-        >>> xtpows.shape
+        tensor([[ 1.0000,  0.0000,  0.0000,  0.0000,  0.0000],
+                [ 2.5526,  1.5213,  0.0000,  0.0000,  0.0000],
+                [ 5.7016,  7.7823,  2.2653,  0.0000,  0.0000],
+                [12.4138, 27.3369, 17.4622,  3.3538,  0.0000],
+                [26.8769, 82.2834, 83.9242, 34.5890,  4.9534]])
+        >>> xpows = x[...,None]**torch.arange(n+1)
+        >>> xpows.shape
         torch.Size([65536, 5])
-        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xtpows) # generally unstable
+        >>> yhat = torch.einsum("ij,...j->i...",coeffs,xpows) # generally unstable
         >>> yhat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(y,yhat)
@@ -484,10 +497,10 @@ class Jacobi(AbstractOrthoPolys):
         >>> yp = poly.deriv(n,x) 
         >>> yp.shape
         torch.Size([5, 65536])
-        >>> xtpowsm1 = xt[...,None]**torch.arange(-1,n)
-        >>> xtpowsm1.shape
+        >>> xpowsm1 = x[...,None]**torch.arange(-1,n)
+        >>> xpowsm1.shape
         torch.Size([65536, 5])
-        >>> yphat = poly.scale*torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xtpowsm1) # generally unstable
+        >>> yphat = torch.einsum("ij,...j->i...",coeffs*torch.arange(n+1),xpowsm1) # generally unstable
         >>> yphat.shape
         torch.Size([5, 65536])
         >>> assert torch.allclose(yphat,yp)
