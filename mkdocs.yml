@@ -1,16 +1,38 @@
 site_name: "TorchOrthoPolys"
 nav:
   - Home: index.md
+  - Demos: 
+    - Univariate Density Approx from Moments: examples/approx_1d.ipynb
   
 plugins:
-  # - mkdocs-jupyter:
-  #     ignore_h1_titles: True
+  - search
+  - mkdocs-jupyter:
+      ignore_h1_titles: true    # Include H1 from notebooks
+      execute: false              # Execute notebooks during build
+      include_source: true       # Add download link for source notebooks
+      remove_empty_cells: true
+      # theme: dark               # Use dark theme for code cells
+      # include: ["*.ipynb"]  # File patterns to include
+      # execute_ignore: []  # Skip certain files
+      # allow_errors: false        # Fail build on notebook errors
+      # kernel_name: python3       # Specify kernel to use
+      # show_input: true          # Show input cells by default
+      # no_input: false           # Don't hide all inputs
+      # remove_tag_config:
+      #   remove_cell_tags:
+      #     - "hide"              # Hide cells with these tags
+      #     - "hide-cell"
+      #   remove_all_outputs_tags:
+      #     - "hide-output"       # Hide outputs for tagged cells
+      #   remove_input_tags:
+      #     - "hide-input"        # Hide input for tagged cells
   - mkdocstrings:
       #enabled: !ENV [ENABLE_MKDOCSTRINGS, true]
       #custom_templates: templates
       default_handler: python
       handlers:
         python:
+          paths: [torchorthopolys]  # search packages in the src folder
           options:
             members_order: source
             show_root_toc_entry: false
@@ -24,15 +46,34 @@ plugins:
               ignore_init_summary: false
             merge_init_into_class: true
 theme:
+  palette:
+    # Palette toggle for light mode
+    - scheme: default
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+      primary: red
+    # Palette toggle for dark mode
+    - scheme: slate
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+      primary: red
   name: material
-  navigation_depth: 5
+  navigation_depth: 6
   color_mode: auto
   user_color_mode_toggle: True
   features:
+    # - navigation.instant
     - navigation.expand
     - toc.follow
     - navigation.sections
     - toc.integrate
+    - announce.dismiss
+    - content.action.edit
+    - content.action.view
+    - content.code.annotate
+    - content.code.copy
   icon:
     admonition:
       note: octicons/tag-16
@@ -51,10 +92,24 @@ markdown_extensions:
   - toc
   - attr_list
   - admonition
+  # - mdx_math
+  - extra
   - pymdownx.superfences
   - pymdownx.details
   - pymdownx.arithmatex:
       generic: true
+  - pymdownx.highlight:
+      anchor_linenums: true
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.superfences
+
 extra_javascript:
-  - javascripts/mathjax.js
-  - https://unpkg.com/mathjax@3/es5/tex-mml-chtml.js
+  - javascripts/katex.js
+  - https://unpkg.com/katex@0/dist/katex.min.js
+  - https://unpkg.com/katex@0/dist/contrib/auto-render.min.js
+
+extra_css:
+  - https://unpkg.com/katex@0/dist/katex.min.css
